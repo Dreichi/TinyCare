@@ -1,0 +1,35 @@
+{
+  "expo": {
+    "name": "TinyCare",
+    "slug": "TinyCare",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.dreichi.TinyCare"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "package": "com.dreichi.TinyCare"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": ["expo-font"],
+    "extra": {
+      "eas": {
+        "projectId": "7fe5e80f-4ff6-4083-a977-9c11b494b5f4"
+      }
+    }
+  }
+}
