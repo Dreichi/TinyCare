@@ -49,7 +49,6 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
         <View style={styles.formContainer}>
           <Text style={styles.title}>CONNEXION</Text>
 
-          {/* Input Email */}
           <View style={styles.inputContainer}>
             <Text style={styles.inputLabel}>Email</Text>
             <TextInput
@@ -61,7 +60,6 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
             />
           </View>
 
-          {/* Input Mot de passe */}
           <View style={styles.inputContainer}>
             <Text style={styles.inputLabel}>Mot de passe</Text>
             <TextInput
@@ -98,13 +96,13 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "flex-start",
     padding: 0,
+    backgroundColor: "#DCE1EB",
   },
   logoContainer: {
-    // Adjust to push the logo more towards the top
     flex: 0.3,
     justifyContent: "flex-start",
     alignItems: "center",
-    marginTop: Platform.OS === "ios" ? 0 : 32, // Adjust based on the platform
+    marginTop: Platform.OS === "ios" ? 0 : 32,
   },
   logo: {
     width: 200,
@@ -120,7 +118,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 2,
     borderLeftWidth: 2,
     borderRightWidth: 2,
-    justifyContent: "flex-start", // Align content to the top
+    justifyContent: "flex-start",
   },
   title: {
     fontSize: 32,
@@ -128,7 +126,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
     color: "rgba(17, 65, 135, 1)",
     fontFamily: "Montserrat_600SemiBold",
-    marginTop: 16, // Push the title a little down to avoid sticking to the top border
+    marginTop: 16,
   },
   inputContainer: {
     marginBottom: 16,

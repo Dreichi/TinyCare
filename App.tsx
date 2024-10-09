@@ -1,11 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import axios from "axios";
 import LoginScreen from "./screens/LoginScreen";
 import SignupScreen from "./screens/SignupScreen";
-import VerifyScreen from "./screens/VerifyScreen";
 import Navbar from "./components/Navbar";
 import { View, ActivityIndicator, SafeAreaView } from "react-native";
 import {
@@ -17,8 +14,11 @@ import {
 } from "@expo-google-fonts/montserrat";
 import { EmailProvider } from "./context/EmailContext";
 import ChatScreen from "./screens/ChatScreen";
-import TermsScreen from "./screens/TermsScreen"; // Assurez-vous que cet import est correct
+import TermsScreen from "./screens/TermsScreen";
+import { supabase } from "./utils/supabase";
 import { LogBox } from "react-native";
+import BabyInfo from "./screens/BabyInfo";
+import Appointment from "./screens/Appointment";
 
 LogBox.ignoreLogs(["Warning: ..."]);
 LogBox.ignoreAllLogs();
@@ -28,15 +28,16 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 type RootStackParamList = {
   Login: undefined;
   Signup: undefined;
-  Verify: undefined;
   Home: undefined;
   Post: undefined;
+  BabyInfo: { baby_id: number };
+  Appointment: { baby_id: number };
   ChatScreen: { conversationId: number; otherUserName: string };
   Terms: undefined;
 };
 
 export default function App() {
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   let [fontsLoaded] = useFonts({
     Montserrat_400Regular,
@@ -45,34 +46,23 @@ export default function App() {
     Montserrat_700Bold,
   });
 
-  // useEffect(() => {
-  //   const checkToken = async () => {
-  //     try {
-  //       const token = await AsyncStorage.getItem("token");
-  //       if (token) {
-  //         const response = await axios.get(`${apiUrl}/users/profile`, {
-  //           headers: {
-  //             Authorization: `Bearer ${token}`,
-  //           },
-  //         });
-  //         if (response.status === 200) {
-  //           setIsAuthenticated(true);
-  //         } else {
-  //           setIsAuthenticated(false);
-  //         }
-  //       }
-  //     } catch (error) {
-  //       console.error(error)
-  //       setIsAuthenticated(false);
-  //     } finally {
-  //       setLoading(false);
-  //     }
-  //   };
+  useEffect(() => {
+    const checkAuthStatus = async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (session) {
+        setIsAuthenticated(true);
+      } else {
+        setIsAuthenticated(false);
+      }
+      setLoading(false);
+    };
 
-  //   checkToken();
-  // }, []);
+    checkAuthStatus();
+  }, []);
 
-  if (loading) {
+  if (!fontsLoaded || loading) {
     return (
       <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
         <ActivityIndicator size="large" color="#0000ff" />
@@ -97,13 +87,21 @@ export default function App() {
               component={SignupScreen}
               options={{ headerShown: false }}
             />
-            <Stack.Screen name="Verify" component={VerifyScreen} />
             <Stack.Screen
               name="Home"
               component={Navbar}
               options={{ headerShown: false }}
             />
-            {/* <Stack.Screen name="Post" component={PostScreen} /> */}
+            <Stack.Screen
+              name="BabyInfo"
+              component={BabyInfo}
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="Appointment"
+              component={Appointment}
+              options={{ headerShown: false }}
+            />
             <Stack.Screen
               name="ChatScreen"
               component={ChatScreen}

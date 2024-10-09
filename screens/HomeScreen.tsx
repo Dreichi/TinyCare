@@ -1,254 +1,102 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import {
   StyleSheet,
   Text,
   View,
   TouchableOpacity,
-  Image,
-  FlatList,
-  TextInput,
-  RefreshControl,
+  Modal,
+  ScrollView,
   Platform,
+  Image,
 } from "react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import axios from "axios";
 
-export default function HomeScreen({ navigation }: { navigation: any }) {
-  const [username, setUsername] = useState("");
-  const [posts, setPosts] = useState([]);
-  const [allPosts, setAllPosts] = useState([]);
-  const [selectedTab, setSelectedTab] = useState("all");
-  const [refreshing, setRefreshing] = useState(false);
+export default function HomeScreen({ navigation }: any) {
+  const [selectedChild, setSelectedChild] = useState("Enfant 1");
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  const children = ["Aymeric", "Jean-Christophe", "Damien", "Jack"];
 
-  useEffect(() => {
-    let isMounted = true;
+  const menuItems = [
+    { title: "Comment vas bébé ?", icon: "📝", screen: "BabyInfo", id: 1 },
+    { title: "Croissance", icon: "📈" },
+    { title: "Je viens voir bébé", icon: "📅", screen: "Appointment", id: 1 },
+    { title: "Album photo", icon: "📷" },
+    { title: "Contacter l'infirmière", icon: "📞" },
+  ];
 
-    // const getProfile = async () => {
-    //   try {
-    //     const token = await AsyncStorage.getItem("token");
-    //     if (token) {
-    //       const response = await axios.get(`${apiUrl}/users/profile`, {
-    //         headers: {
-    //           Authorization: `Bearer ${token}`,
-    //         },
-    //       });
-    //       if (response.status === 200 && response.data && response.data.data) {
-    //         if (isMounted) {
-    //           if (response.data.data.username) {
-    //             setUsername(response.data.data.username);
-    //           } else {
-    //             console.error("Username not found in response.data.data");
-    //           }
-    //         }
-    //       } else {
-    //         console.error(
-    //           "Failed to fetch profile data, status code:",
-    //           response.status
-    //         );
-    //       }
-    //     } else {
-    //       console.error("No token found in AsyncStorage");
-    //     }
-    //   } catch (error) {
-    //     console.error("Error fetching profile data", error);
-    //   }
-    // };
-
-    // const getPosts = async () => {
-    //   try {
-    //     const token = await AsyncStorage.getItem("token");
-    //     if (token) {
-    //       const response = await axios.get(`${apiUrl}/posts`, {
-    //         headers: {
-    //           Authorization: `Bearer ${token}`,
-    //         },
-    //       });
-    //       if (response.status === 200) {
-    //         if (isMounted) {
-    //           const sortedPosts = response.data.posts.sort(
-    //             (a: any, b: any) =>
-    //               new Date(b.createdAt).getTime() -
-    //               new Date(a.createdAt).getTime()
-    //           );
-    //           setPosts(sortedPosts);
-    //           setAllPosts(sortedPosts);
-    //         }
-    //       } else {
-    //         console.error(
-    //           "Failed to fetch posts data, status code:",
-    //           response.status
-    //         );
-    //       }
-    //     } else {
-    //       console.error("No token found in AsyncStorage");
-    //     }
-    //   } catch (error) {
-    //     console.error("Error fetching posts data", error);
-    //   }
-    // };
-
-    // getProfile();
-    // getPosts();
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
-
-  const formatDate = (dateString: string) => {
-    const options: Intl.DateTimeFormatOptions = {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-      hour: "numeric",
-      minute: "numeric",
-    };
-    return new Date(dateString).toLocaleDateString("fr-FR", options);
-  };
-
-  const navigateToPost = (post: any) => {
-    navigation.navigate("Post", { post });
-  };
-
-  const renderPost = ({ item }: { item: any }) => (
-    <TouchableOpacity onPress={() => navigateToPost(item)}>
-      <View style={styles.postContainer}>
-        <View style={styles.postGroupContainer}>
-          <View style={styles.postContainerLeft}>
-            {item.image && (
-              <Image
-                source={{ uri: `data:image/png;base64,${item.image}` }}
-                style={styles.imageItem}
-              />
-            )}
-          </View>
-          <View style={styles.postContainerRight}>
-            <Text style={styles.postTitle}>{item.title}</Text>
-            <Text style={styles.postedBy}>Posté par: {item.postedBy}</Text>
-            <Text style={styles.createdAt}>
-              Le {formatDate(item.createdAt)}
-            </Text>
-          </View>
-        </View>
-        <Text style={styles.postContent}>{item.content}</Text>
-      </View>
+  const renderMenuItem = (item: any) => (
+    <TouchableOpacity
+      style={styles.menuButton}
+      key={item.title}
+      onPress={() => {
+        if (item.screen) {
+          navigation.navigate(item.screen, { baby_id: item.id });
+        }
+      }}
+    >
+      <Text style={styles.menuIcon}>{item.icon}</Text>
+      <Text style={styles.menuText}>{item.title}</Text>
+      <Text style={styles.arrow}>➔</Text>
     </TouchableOpacity>
   );
 
-  //   const onRefresh = async () => {
-  //     setRefreshing(true);
-  //     try {
-  //       const token = await AsyncStorage.getItem("token");
-  //       if (token) {
-  //         const response = await axios.get(`${apiUrl}/posts`, {
-  //           headers: {
-  //             Authorization: `Bearer ${token}`,
-  //           },
-  //         });
-  //         if (response.status === 200) {
-  //           const sortedPosts = response.data.posts.sort(
-  //             (a: any, b: any) =>
-  //               new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-  //           );
-  //           setPosts(sortedPosts);
-  //           setAllPosts(sortedPosts);
-  //         } else {
-  //           console.error(
-  //             "Failed to fetch posts data, status code:",
-  //             response.status
-  //           );
-  //         }
-  //       } else {
-  //         console.error("No token found in AsyncStorage");
-  //       }
-  //     } catch (error) {
-  //       console.error("Error fetching posts data", error);
-  //     } finally {
-  //       setRefreshing(false);
-  //     }
-  //   };
+  const openModal = () => setIsModalVisible(true);
+  const closeModal = () => setIsModalVisible(false);
 
-  const filteredPosts =
-    selectedTab === "all"
-      ? posts
-      : posts.filter((post: any) => post.isGardening);
+  const selectChild = (child: string) => {
+    setSelectedChild(child);
+    closeModal();
+  };
 
   return (
     <View style={styles.container}>
-      <Image source={require("../assets/logo.png")} style={styles.logo} />
-      <Text style={styles.greeting}>Bonjour {username}</Text>
-      <TextInput
-        placeholder="Rechercher"
-        placeholderTextColor="white"
-        style={styles.input}
-        onChangeText={(text) => {
-          if (text === "") {
-            setPosts(allPosts);
-          } else {
-            setPosts(
-              allPosts.filter(
-                (post: {
-                  title: string;
-                  content: string;
-                  postedBy: string;
-                }) => {
-                  return (
-                    post.title.includes(text) ||
-                    post.content.includes(text) ||
-                    post.postedBy.includes(text)
-                  );
-                }
-              )
-            );
-          }
-        }}
-      />
-      <View style={styles.tabContainer}>
-        <TouchableOpacity
-          style={[
-            styles.tabButton,
-            selectedTab === "all" && styles.activeTabButton,
-          ]}
-          onPress={() => setSelectedTab("all")}
-        >
-          <Text
-            style={[
-              styles.tabButtonText,
-              selectedTab === "all" && styles.activeTabButtonText,
-            ]}
-          >
-            Tous les posts
+      <ScrollView contentContainerStyle={styles.scrollContainer}>
+        <View style={styles.header}>
+          <Text style={styles.greeting}>👋 Bonjour, utilisateur</Text>
+          <View style={styles.childGroup}>
+            <Text style={styles.child}>Enfant</Text>
+            <TouchableOpacity style={styles.customPicker} onPress={openModal}>
+              <Text style={styles.customPickerText}>{selectedChild}</Text>
+              <Image source={require("../assets/Down_arrow.png")}></Image>
+            </TouchableOpacity>
+          </View>
+        </View>
+        <View style={styles.subHeader}>
+          <View style={styles.locationGroup}>
+            <Image
+              style={styles.locationImage}
+              source={require("../assets/icons/hopital.png")}
+            ></Image>
+            <Text style={styles.location}>Centre hospitalier de Lens</Text>
+          </View>
+          <Text style={styles.status}>
+            Votre enfant {selectedChild} est actuellement réveillé&nbsp;!
           </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[
-            styles.tabButton,
-            selectedTab === "gardening" && styles.activeTabButton,
-          ]}
-          onPress={() => setSelectedTab("gardening")}
-        >
-          <Text
-            style={[
-              styles.tabButtonText,
-              selectedTab === "gardening" && styles.activeTabButtonText,
-            ]}
-          >
-            Gardiennage
-          </Text>
-        </TouchableOpacity>
-      </View>
-      <FlatList
-        data={filteredPosts}
-        renderItem={renderPost}
-        keyExtractor={(item) => item.id.toString()}
-        style={styles.postList}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            // onRefresh={onRefresh}
-          />
-        }
-      />
+        </View>
+        <View style={styles.menuContainer}>
+          {menuItems.map(renderMenuItem)}
+        </View>
+      </ScrollView>
+
+      <Modal visible={isModalVisible} transparent={true} animationType="slide">
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <ScrollView>
+              {children.map((child) => (
+                <TouchableOpacity
+                  key={child}
+                  style={styles.modalOption}
+                  onPress={() => selectChild(child)}
+                >
+                  <Text style={styles.modalOptionText}>{child}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+            <TouchableOpacity style={styles.closeButton} onPress={closeModal}>
+              <Text style={styles.closeButtonText}>Fermer</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -256,186 +104,160 @@ export default function HomeScreen({ navigation }: { navigation: any }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: "flex-start",
-    alignItems: "center",
-    padding: 24,
-    paddingTop: Platform.OS === "android" ? 32 : 0,
+    backgroundColor: "#F2F0FF",
   },
-  logo: {
-    height: 100,
-    width: 100,
-    marginTop: Platform.OS === "android" ? 10 : 24,
+  scrollContainer: {
+    flexGrow: 1,
+    paddingBottom: 80,
   },
-  imagesContainer: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-    gap: 10,
-    overflow: "scroll",
-    padding: 5,
-  },
-  imageItem: {
-    width: 100,
-    height: 100,
-    borderBottomRightRadius: 5,
-  },
-  input: {
-    height: 50,
-    fontSize: 12,
-    borderColor: "transparent",
-    borderRadius: 6,
-    backgroundColor: "#347355",
-    marginBottom: 12,
-    paddingHorizontal: 8,
-    color: "#fff",
-    padding: 4,
-    fontFamily: "Montserrat_600SemiBold",
-    maxWidth: 300,
-    alignSelf: "center",
-    width: "100%",
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  submit: {
-    backgroundColor: "rgba(52, 115, 85, 1)",
-    padding: 4,
-    borderRadius: 6,
-    height: 50,
-    justifyContent: "center",
-    maxWidth: 300,
-    width: "100%",
-    alignSelf: "center",
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-    fontFamily: "Montserrat_500Medium",
-  },
-  greeting: {
-    fontSize: 24,
+  header: {
+    backgroundColor: "#274C86",
+    borderBottomLeftRadius: 35,
+    borderBottomRightRadius: 35,
+    padding: 20,
     marginBottom: 20,
-    marginTop: 20,
-    alignSelf: "center",
-    fontFamily: "Montserrat_500Medium",
+    height: Platform.OS === "ios" ? 100 : 130,
   },
-  button: {
-    backgroundColor: "#347355",
-    padding: 10,
-    borderRadius: 5,
+  subHeader: {},
+  greeting: {
+    color: "#FFFFFF",
+    fontSize: 24,
+    fontWeight: "bold",
+    marginBottom: 5,
+    paddingTop: Platform.OS === "android" ? 20 : 0,
   },
-  buttonText: {
-    color: "#FFF",
-    fontSize: 18,
-  },
-  tabContainer: {
+  childGroup: {
     flexDirection: "row",
-    marginBottom: 10,
-    gap: 10,
+    alignItems: "center",
+    backgroundColor: "#FFFFFF",
+    borderRadius: 50,
+    borderWidth: 1,
+    transform: [{ translateY: 20 }],
+    alignSelf: "center",
+    paddingHorizontal: 16,
+    width: "80%",
   },
-  tabButton: {
-    flex: 1,
+  child: {
+    color: "#000000",
+    fontSize: 16,
+    marginRight: 5,
+    alignItems: "flex-start",
+  },
+  customPicker: {
+    flexDirection: "row",
+    alignItems: "center",
     padding: 10,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 10,
+    borderColor: "#274C86",
+  },
+  customPickerText: {
+    fontSize: 16,
+    color: "#000000",
+    height: 20,
+  },
+  location: {
+    color: "#6F6F6F",
+    fontSize: 16,
+    marginBottom: 5,
+  },
+  locationGroup: {
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#ccc",
-    borderRadius: 3,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
+    padding: 10,
+    gap: 16,
+    marginVertical: 10,
   },
-  activeTabButton: {
-    backgroundColor: "#347355",
+  locationImage: {
+    width: 30,
+    height: 30,
+    transform: [{ translateY: -3 }],
   },
-  tabButtonText: {
-    fontFamily: "Montserrat_400Regular",
-    color: "#000",
+  status: {
+    color: "#6F6F6F",
     fontSize: 16,
+    fontWeight: "bold",
+    padding: 10,
+    width: "80%",
+    alignSelf: "center",
   },
-  activeTabButtonText: {
-    color: "#fff",
+  menuContainer: {
+    flex: 1,
+    // padding: 32,
+    paddingTop: 16,
+    paddingBottom: 32,
+    paddingHorizontal: 32,
   },
-  postList: {
-    marginTop: 20,
-    width: "100%",
-  },
-  postContainer: {
-    margin: 16,
-    borderRadius: 24,
-    backgroundColor: "#347355",
-    maxHeight: 300,
-    marginBottom: 16,
+  menuButton: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "#797979",
+    padding: 15,
+    marginBottom: 10,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 3,
+  },
+  menuText: {
+    fontSize: 16,
+    fontWeight: "500",
+    color: "#274C86",
+  },
+  menuIcon: {
+    backgroundColor: "#A2BFE9",
+    padding: 16,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "#797979",
     overflow: "hidden",
   },
-  postGroupContainer: {
-    flexDirection: "row",
-  },
-  postContainerLeft: {
-    marginRight: 10,
-    backgroundColor: "#F2EAE3",
-    borderBottomRightRadius: 4,
-    borderTopLeftRadius: 4,
-  },
-  postContainerRight: {
-    flex: 1,
-    alignSelf: "center",
-    justifyContent: "center",
-    textAlign: "center",
-  },
-
-  postTitle: {
-    fontSize: 20,
-    color: "#FFF",
-    marginTop: 10,
-    fontFamily: "Montserrat_700Bold",
-  },
-  postContent: {
-    fontSize: 16,
-    marginTop: 10,
-    width: "100%",
-    color: "#FFF",
-    marginLeft: 10,
-    padding: 8,
-    marginBottom: 10,
-  },
-  postedBy: {
-    fontSize: 14,
-    marginTop: 5,
-    color: "#FFF",
-    fontFamily: "Montserrat_400Regular",
-  },
-  createdAt: {
-    fontSize: 14,
-    marginTop: 5,
-    color: "#FFF",
-    fontFamily: "Montserrat_400Regular",
-  },
-  text: {
+  arrow: {
     fontSize: 18,
-    marginBottom: 10,
-    color: "#272727",
-    alignSelf: "center",
-    fontFamily: "Montserrat_400Regular",
+    color: "#FFFFFF",
+    backgroundColor: "#274C86",
+    padding: 8,
+    borderWidth: 1,
+    overflow: "hidden",
+    borderRadius: 18,
+    borderColor: "#274C86",
+  },
+  modalContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+  },
+  modalContent: {
+    backgroundColor: "#FFF",
+    width: 300,
+    padding: 20,
+    borderRadius: 10,
+    alignItems: "center",
+  },
+  modalOption: {
+    padding: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "#CCC",
+  },
+  modalOptionText: {
+    fontSize: 18,
+    color: "#274C86",
+  },
+  closeButton: {
+    marginTop: 10,
+    padding: 10,
+    backgroundColor: "#274C86",
+    borderRadius: 5,
+  },
+  closeButtonText: {
+    color: "#FFFFFF",
+    fontSize: 16,
   },
 });

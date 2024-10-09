@@ -6,7 +6,7 @@ import {
 import { FontAwesome } from "@expo/vector-icons";
 import { RouteProp, ParamListBase } from "@react-navigation/native";
 import HomeScreen from "../screens/HomeScreen";
-// import ProfileScreen from "../screens/ProfileScreen";
+import ProfileScreen from "../screens/ProfileScreen";
 // import CreateScreen from "../screens/CreateScreen";
 // import MessageScreen from "../screens/MessageScreen";
 
@@ -70,12 +70,12 @@ const Navbar: React.FC = () => {
         name="Message"
         component={MessageScreen}
         options={{ headerShown: false }}
-      />
+      /> */}
       <Tab.Screen
         name="Profile"
         component={ProfileScreen}
         options={{ headerShown: false }}
-      /> */}
+      />
     </Tab.Navigator>
   );
 };

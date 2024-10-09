@@ -6,6 +6,7 @@ import {
   View,
   SafeAreaView,
   KeyboardAvoidingView,
+  ScrollView,
   Pressable,
   Platform,
   Alert,
@@ -13,78 +14,59 @@ import {
 } from "react-native";
 import { Image } from "react-native";
 import { supabase } from "../utils/supabase";
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withSpring,
-} from "react-native-reanimated";
-import { PanGestureHandler } from "react-native-gesture-handler";
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 
-export default function SignupScreen({ navigation }: { navigation: any }) {
+export default function SignupScreen({ navigation }) {
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [loading, setLoading] = useState(false);
-
-  const formY = useSharedValue(SCREEN_HEIGHT * 0.5); // Form starts halfway on the screen
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: formY.value }],
-  }));
 
   async function signUpWithEmail() {
     setLoading(true);
     const { error } = await supabase.auth.signUp({
       email: identifier,
       password: password,
+      options: {
+        data: {
+          first_name: firstName,
+          last_name: lastName,
+        },
+      },
     });
 
-    if (error) Alert.alert(error.message);
-    else {
+    if (error) {
+      console.log(error);
+      Alert.alert(error.message);
+    } else {
       console.log("Signup successful");
       navigation.navigate("Home");
     }
     setLoading(false);
   }
 
-  const handleGesture = (event: a) => {
-    const { translationY } = event.nativeEvent;
-
-    // Update the position of the form based on user's dragging
-    formY.value = withSpring(
-      Math.min(SCREEN_HEIGHT * 0.5, formY.value + translationY)
-    );
-  };
-
-  const handleGestureEnd = (event) => {
-    // Snap the form back to either its maximum or minimum position when user releases
-    if (formY.value < SCREEN_HEIGHT * 0.25) {
-      formY.value = withSpring(0); // Snap to top
-    } else {
-      formY.value = withSpring(SCREEN_HEIGHT * 0.5); // Snap to initial position
-    }
-  };
-
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : "height"}
       style={styles.container}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 50 : 40}
     >
-      <SafeAreaView style={styles.container}>
-        <View style={styles.logoContainer}>
-          <Image
-            source={require("../assets/TinyCareLogo.png")}
-            style={styles.logo}
-          />
-        </View>
+      <ScrollView
+        contentContainerStyle={styles.scrollContainer}
+        keyboardShouldPersistTaps="handled"
+      >
+        <SafeAreaView style={styles.container}>
+          <View style={styles.logoContainer}>
+            <Image
+              source={require("../assets/TinyCareLogo.png")}
+              style={styles.logo}
+            />
+          </View>
 
-        {/* Gesture Handler for dragging */}
-        <PanGestureHandler
-          onGestureEvent={handleGesture}
-          onEnded={handleGestureEnd}
-        >
-          <Animated.View style={[styles.formContainer, animatedStyle]}>
+          {/* Form Container */}
+          <View style={styles.formContainer}>
             <Text style={styles.title}>INSCRIPTION</Text>
 
             <View style={styles.inputContainer}>
@@ -92,8 +74,8 @@ export default function SignupScreen({ navigation }: { navigation: any }) {
               <TextInput
                 placeholder="Entrez votre Nom"
                 placeholderTextColor="gray"
-                value={identifier}
-                onChangeText={setIdentifier}
+                value={lastName}
+                onChangeText={setLastName}
                 style={styles.input}
               />
             </View>
@@ -103,8 +85,8 @@ export default function SignupScreen({ navigation }: { navigation: any }) {
               <TextInput
                 placeholder="Entrez votre Prénom"
                 placeholderTextColor="gray"
-                value={identifier}
-                onChangeText={setIdentifier}
+                value={firstName}
+                onChangeText={setFirstName}
                 style={styles.input}
               />
             </View>
@@ -148,9 +130,9 @@ export default function SignupScreen({ navigation }: { navigation: any }) {
                 Déjà un compte ? Connectez-vous
               </Text>
             </Pressable>
-          </Animated.View>
-        </PanGestureHandler>
-      </SafeAreaView>
+          </View>
+        </SafeAreaView>
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 }
@@ -160,22 +142,25 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "flex-start",
     padding: 0,
+    backgroundColor: "#DCE1EB",
+  },
+  scrollContainer: {
+    flexGrow: 1,
+    justifyContent: "center",
   },
   logoContainer: {
-    flex: 0.3,
+    flex: 0.25,
     justifyContent: "flex-start",
     alignItems: "center",
     marginTop: 32,
   },
   logo: {
-    width: 200,
-    height: 200,
+    width: 150,
+    height: 150,
     resizeMode: "contain",
   },
   formContainer: {
-    position: "absolute",
-    left: 0,
-    right: 0,
+    flex: 0.75,
     backgroundColor: "#FFFFFF",
     padding: 16,
     borderTopLeftRadius: 70,
@@ -184,7 +169,6 @@ const styles = StyleSheet.create({
     borderLeftWidth: 2,
     borderRightWidth: 2,
     justifyContent: "flex-start",
-    height: SCREEN_HEIGHT, // Form takes full height, but is draggable
   },
   title: {
     fontSize: 32,
