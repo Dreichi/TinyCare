@@ -11,22 +11,24 @@ import {
   Platform,
   Alert,
   Dimensions,
+  Switch,
 } from "react-native";
 import { Image } from "react-native";
 import { supabase } from "../utils/supabase";
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 
-export default function SignupScreen({ navigation }) {
+export default function SignupScreen({ navigation }: any) {
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [loading, setLoading] = useState(false);
+  const [isChecked, setIsChecked] = useState(false);
 
   async function signUpWithEmail() {
     setLoading(true);
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email: identifier,
       password: password,
       options: {
@@ -39,11 +41,21 @@ export default function SignupScreen({ navigation }) {
 
     if (error) {
       console.log(error);
-      Alert.alert(error.message);
     } else {
-      console.log("Signup successful");
-      navigation.navigate("Home");
+      const { error } = await supabase.from("users").insert({
+        id: data.user?.id,
+        role: "parent",
+        name: firstName + " " + lastName,
+      });
+
+      if (error) {
+        console.log(error);
+        Alert.alert(error.message);
+      } else {
+        navigation.navigate("Home");
+      }
     }
+
     setLoading(false);
   }
 
@@ -114,10 +126,24 @@ export default function SignupScreen({ navigation }) {
               />
             </View>
 
+            {/* Switch for Terms and Conditions */}
+            <View style={styles.switchContainer}>
+              <Switch value={isChecked} onValueChange={setIsChecked} />
+              <Text style={styles.switchText}>
+                J'accepte les{" "}
+                <Text
+                  style={styles.link}
+                  onPress={() => navigation.navigate("Terms")}
+                >
+                  termes et conditions
+                </Text>
+              </Text>
+            </View>
+
             <Pressable
-              disabled={loading}
+              disabled={loading || !isChecked}
               onPress={() => signUpWithEmail()}
-              style={styles.submit}
+              style={[styles.submit, { opacity: isChecked ? 1 : 0.5 }]}
             >
               <Text style={styles.textSubmit}>INSCRIPTION</Text>
             </Pressable>
@@ -200,6 +226,23 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     color: "#000",
     fontFamily: "Montserrat_400Regular",
+  },
+  switchContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 16,
+    maxWidth: 300,
+    alignSelf: "center",
+  },
+  switchText: {
+    fontSize: 14,
+    color: "#000",
+    fontFamily: "Montserrat_400Regular",
+    marginLeft: 8,
+  },
+  link: {
+    color: "#849CCE",
+    textDecorationLine: "underline",
   },
   submit: {
     backgroundColor: "rgba(17, 65, 135, 1)",

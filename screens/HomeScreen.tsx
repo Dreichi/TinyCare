@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   StyleSheet,
   Text,
@@ -9,27 +9,94 @@ import {
   Platform,
   Image,
 } from "react-native";
+import { supabase } from "../utils/supabase";
 
-export default function HomeScreen({ navigation }: any) {
-  const [selectedChild, setSelectedChild] = useState("Enfant 1");
+type Baby = {
+  id: number;
+  first_name: string;
+};
+
+export default function HomeScreen({ navigation }: { navigation: any }) {
+  const [selectedChild, setSelectedChild] = useState<Baby | null>(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
-  const children = ["Aymeric", "Jean-Christophe", "Damien", "Jack"];
+  const [children, setChildren] = useState<Baby[]>([]);
+  const [userName, setUserName] = useState("utilisateur");
+
+  useEffect(() => {
+    const getBabies = async () => {
+      const userResponse = await supabase.auth.getUser();
+      const user = userResponse.data.user;
+
+      if (user) {
+        const userId = user.id;
+
+        const { data: userData, error: userError } = await supabase
+          .from("users")
+          .select("babies, name")
+          .eq("id", userId)
+          .single();
+
+        setUserName(userData?.name);
+        if (userError) {
+          console.error(
+            "Erreur lors de la récupération de l'utilisateur:",
+            userError.message
+          );
+          return;
+        }
+
+        const babyIds = Array.isArray(userData?.babies?.babies)
+          ? userData.babies.babies.map(
+              (baby: { baby_id: number }) => baby.baby_id
+            )
+          : [];
+
+        if (babyIds.length === 0) return;
+
+        const { data: babies, error: babiesError } = await supabase
+          .from("baby")
+          .select("*")
+          .in("id", babyIds);
+
+        if (babiesError) {
+          console.error(
+            "Erreur lors de la récupération des bébés:",
+            babiesError.message
+          );
+          return;
+        }
+
+        setChildren(babies || []);
+        if (babies && babies.length > 0) {
+          setSelectedChild(babies[0]);
+        }
+      } else {
+        console.error("Aucun utilisateur connecté.");
+      }
+    };
+
+    getBabies();
+  }, []);
 
   const menuItems = [
-    { title: "Comment vas bébé ?", icon: "📝", screen: "BabyInfo", id: 1 },
-    { title: "Croissance", icon: "📈" },
-    { title: "Je viens voir bébé", icon: "📅", screen: "Appointment", id: 1 },
+    { title: "Comment vas bébé ?", icon: "📝", screen: "BabyInfo" },
+    { title: "Données", icon: "📈", screen: "Data" },
+    { title: "Je viens voir bébé", icon: "📅", screen: "Appointment" },
     { title: "Album photo", icon: "📷" },
-    { title: "Contacter l'infirmière", icon: "📞" },
+    { title: "Contacter l'infirmière", icon: "📞", screen: "NurseContact" },
   ];
 
-  const renderMenuItem = (item: any) => (
+  const renderMenuItem = (item: {
+    title: string;
+    icon: string;
+    screen?: string;
+  }) => (
     <TouchableOpacity
       style={styles.menuButton}
       key={item.title}
       onPress={() => {
-        if (item.screen) {
-          navigation.navigate(item.screen, { baby_id: item.id });
+        if (item.screen && selectedChild) {
+          navigation.navigate(item.screen, { baby_id: selectedChild.id });
         }
       }}
     >
@@ -42,21 +109,35 @@ export default function HomeScreen({ navigation }: any) {
   const openModal = () => setIsModalVisible(true);
   const closeModal = () => setIsModalVisible(false);
 
-  const selectChild = (child: string) => {
+  const selectChild = (child: Baby) => {
     setSelectedChild(child);
     closeModal();
   };
 
   return (
     <View style={styles.container}>
+      <Image
+        source={require("../assets/form.png")}
+        style={styles.topImage}
+        blurRadius={0.8}
+      />
+      <Image
+        source={require("../assets/form.png")}
+        style={styles.botImage}
+        blurRadius={0.8}
+      />
       <ScrollView contentContainerStyle={styles.scrollContainer}>
         <View style={styles.header}>
-          <Text style={styles.greeting}>👋 Bonjour, utilisateur</Text>
+          <Text style={styles.greeting}>👋 Bonjour, {userName}</Text>
           <View style={styles.childGroup}>
             <Text style={styles.child}>Enfant</Text>
             <TouchableOpacity style={styles.customPicker} onPress={openModal}>
-              <Text style={styles.customPickerText}>{selectedChild}</Text>
-              <Image source={require("../assets/Down_arrow.png")}></Image>
+              <Text style={styles.customPickerText}>
+                {selectedChild
+                  ? selectedChild.first_name
+                  : "Sélectionnez un enfant"}
+              </Text>
+              <Image source={require("../assets/Down_arrow.png")} />
             </TouchableOpacity>
           </View>
         </View>
@@ -65,11 +146,13 @@ export default function HomeScreen({ navigation }: any) {
             <Image
               style={styles.locationImage}
               source={require("../assets/icons/hopital.png")}
-            ></Image>
+            />
             <Text style={styles.location}>Centre hospitalier de Lens</Text>
           </View>
           <Text style={styles.status}>
-            Votre enfant {selectedChild} est actuellement réveillé&nbsp;!
+            {selectedChild
+              ? `Votre enfant ${selectedChild.first_name} est actuellement réveillé !`
+              : "Sélectionnez un enfant pour afficher les informations"}
           </Text>
         </View>
         <View style={styles.menuContainer}>
@@ -83,11 +166,11 @@ export default function HomeScreen({ navigation }: any) {
             <ScrollView>
               {children.map((child) => (
                 <TouchableOpacity
-                  key={child}
+                  key={child.id}
                   style={styles.modalOption}
                   onPress={() => selectChild(child)}
                 >
-                  <Text style={styles.modalOptionText}>{child}</Text>
+                  <Text style={styles.modalOptionText}>{child.first_name}</Text>
                 </TouchableOpacity>
               ))}
             </ScrollView>
@@ -109,6 +192,22 @@ const styles = StyleSheet.create({
   scrollContainer: {
     flexGrow: 1,
     paddingBottom: 80,
+  },
+  topImage: {
+    position: "absolute",
+    top: 100,
+    right: -300,
+    width: "100%",
+    height: 400,
+    transform: [{ rotate: "0deg" }],
+  },
+  botImage: {
+    position: "absolute",
+    bottom: -150,
+    left: -300,
+    width: "100%",
+    height: 300,
+    transform: [{ rotate: "0deg" }],
   },
   header: {
     backgroundColor: "#274C86",
@@ -184,7 +283,6 @@ const styles = StyleSheet.create({
   },
   menuContainer: {
     flex: 1,
-    // padding: 32,
     paddingTop: 16,
     paddingBottom: 32,
     paddingHorizontal: 32,
@@ -199,24 +297,22 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 3,
   },
   menuText: {
     fontSize: 16,
     fontWeight: "500",
-    color: "#274C86",
+    color: "#6F6F6F",
+    flex: 1,
+    marginLeft: 10,
   },
   menuIcon: {
     backgroundColor: "#A2BFE9",
-    padding: 16,
-    borderRadius: 20,
+    padding: 10,
+    borderRadius: 24,
     borderWidth: 1,
     borderColor: "#797979",
     overflow: "hidden",
+    fontSize: 32,
   },
   arrow: {
     fontSize: 18,

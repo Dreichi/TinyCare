@@ -48,7 +48,7 @@ const screenOptions = ({
 
       return <FontAwesome name={iconName} size={size} color={color} />;
     },
-    tabBarActiveTintColor: "#347355",
+    tabBarActiveTintColor: "#114187",
     tabBarInactiveTintColor: "gray",
   };
 };

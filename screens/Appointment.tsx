@@ -6,6 +6,9 @@ import {
   Alert,
   Button,
   TouchableOpacity,
+  ScrollView,
+  Platform,
+  Image,
 } from "react-native";
 import { supabase } from "../utils/supabase";
 import CalendarPicker from "react-native-calendar-picker";
@@ -168,9 +171,38 @@ export default function Appointment() {
     );
   };
 
+  const currentDate = new Date();
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString("fr-FR", {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+  };
+
   return (
-    <View style={styles.container}>
+    <ScrollView contentContainerStyle={styles.scrollContainer}>
+      <Image
+        source={require("../assets/form.png")}
+        style={styles.topImage}
+        blurRadius={0.8}
+      ></Image>
+      <Image
+        source={require("../assets/form.png")}
+        style={styles.botImage}
+        blurRadius={0.8}
+      ></Image>
+      <View style={styles.header}>
+        <Text style={styles.greeting}>📅 Je viens voir bébé</Text>
+      </View>
+
       <Text style={styles.title}>Prendre rendez-vous pour {babyName}</Text>
+      <Text style={styles.currentDate}>
+        {formatDate(currentDate.toISOString())}
+      </Text>
 
       <CalendarPicker
         onDateChange={handleDateChange}
@@ -186,6 +218,21 @@ export default function Appointment() {
         nextTitleStyle={styles.navButton}
         todayTextStyle={{ fontWeight: "bold" }}
         width={350}
+        months={[
+          "Janvier",
+          "Février",
+          "Mars",
+          "Avril",
+          "Mai",
+          "Juin",
+          "Juillet",
+          "Août",
+          "Septembre",
+          "Octobre",
+          "Novembre",
+          "Décembre",
+        ]}
+        weekdays={["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"]}
       />
 
       <DateTimePickerModal
@@ -200,16 +247,20 @@ export default function Appointment() {
         <View>
           <Text style={styles.selectedDate}>
             Date sélectionnée :{" "}
-            {new Date(selectedDate).toLocaleDateString("fr-FR")}
+            <Text style={styles.date}>
+              {new Date(selectedDate).toLocaleDateString("fr-FR")}
+            </Text>
           </Text>
-          <Text>
-            Heure sélectionnée : {selectedTime.toLocaleTimeString("fr-FR")}
+          <Text style={styles.selectedHour}>
+            Heure sélectionnée :{" "}
+            <Text style={styles.hour}>
+              {selectedTime.toLocaleTimeString("fr-FR")}
+            </Text>
           </Text>
-          <View style={{ marginTop: 20 }}>
-            <Button
-              title="Ajouter un rendez-vous"
-              onPress={handleAddAppointment}
-            />
+          <View>
+            <TouchableOpacity onPress={handleAddAppointment}>
+              <Text style={styles.rdvBtn}>Ajouter le rendez-vous</Text>
+            </TouchableOpacity>
           </View>
         </View>
       )}
@@ -235,22 +286,57 @@ export default function Appointment() {
           </Text>
         )}
       </View>
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: "#F2F0FF",
+  },
+  header: {
+    backgroundColor: "#274C86",
+    borderBottomLeftRadius: 35,
+    borderBottomRightRadius: 35,
     padding: 20,
-    backgroundColor: "#F0F3FF",
-    alignItems: "center",
+    marginBottom: 20,
+    height: Platform.OS === "ios" ? 100 : 130,
+  },
+  greeting: {
+    color: "#FFFFFF",
+    fontSize: 24,
+    fontWeight: "bold",
+    textAlign: "center",
+    paddingTop: Platform.OS === "android" ? 40 : 15,
+  },
+  currentDate: {
+    fontSize: 18,
+    textAlign: "center",
+    color: "#6A6A6A",
+    marginBottom: 20,
   },
   errorText: {
     fontSize: 16,
     color: "red",
     textAlign: "center",
     marginTop: 20,
+  },
+  topImage: {
+    position: "absolute",
+    top: 100,
+    right: -300,
+    width: "100%",
+    height: 400,
+    transform: [{ rotate: "0deg" }],
+  },
+  botImage: {
+    position: "absolute",
+    bottom: -150,
+    left: -300,
+    width: "100%",
+    height: 300,
+    transform: [{ rotate: "0deg" }],
   },
   title: {
     fontSize: 20,
@@ -271,12 +357,43 @@ const styles = StyleSheet.create({
     color: "#274C86",
     fontWeight: "bold",
   },
+  rdvBtn: {
+    fontSize: 16,
+    color: "#FFFFFF",
+    padding: 10,
+    textAlign: "center",
+    marginBottom: 20,
+    backgroundColor: "rgba(17, 65, 135, 1)",
+    borderRadius: 50,
+    height: 50,
+    justifyContent: "center",
+    maxWidth: 200,
+    width: "100%",
+    alignSelf: "center",
+    alignItems: "center",
+  },
   selectedDate: {
     fontSize: 16,
     color: "#6A6A6A",
     textAlign: "center",
     marginTop: 20,
     marginBottom: 10,
+  },
+  selectedHour: {
+    fontSize: 16,
+    color: "#6A6A6A",
+    textAlign: "center",
+    marginBottom: 20,
+  },
+  hour: {
+    fontSize: 16,
+    color: "#3060A6",
+    fontWeight: "bold",
+  },
+  date: {
+    fontSize: 16,
+    color: "#3060A6",
+    fontWeight: "bold",
   },
   appointmentList: {
     width: "100%",
@@ -291,11 +408,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 3,
+    borderWidth: 1,
+    borderColor: "#797979",
   },
   appointmentText: {
     fontSize: 14,
@@ -306,5 +420,8 @@ const styles = StyleSheet.create({
     color: "#6A6A6A",
     textAlign: "center",
     marginTop: 20,
+  },
+  scrollContainer: {
+    paddingBottom: 20,
   },
 });

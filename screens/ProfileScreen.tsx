@@ -301,56 +301,6 @@ const UserProfile = () => {
       >
         <Text style={styles.deleteAccountText}>Supprimer le compte</Text>
       </TouchableOpacity>
-      {userRole === 2 && (
-        <View style={styles.tabContainer}>
-          <TouchableOpacity
-            style={[
-              styles.tabButton,
-              selectedTab === "all" && styles.activeTabButton,
-            ]}
-            onPress={() => setSelectedTab("all")}
-          >
-            <Text
-              style={[
-                styles.tabButtonText,
-                selectedTab === "all" && styles.activeTabButtonText,
-              ]}
-            >
-              Tous les posts
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.tabButton,
-              selectedTab === "gardening" && styles.activeTabButton,
-            ]}
-            onPress={() => setSelectedTab("gardening")}
-          >
-            <Text
-              style={[
-                styles.tabButtonText,
-                selectedTab === "gardening" && styles.activeTabButtonText,
-              ]}
-            >
-              Plantes gardées
-            </Text>
-          </TouchableOpacity>
-        </View>
-      )}
-      <Text style={styles.historyTitle}>Historique des posts</Text>
-      <FlatList
-        data={filteredPosts}
-        renderItem={renderPost}
-        keyExtractor={(item) => item.id.toString()}
-        style={styles.postList}
-        contentContainerStyle={{ paddingBottom: 20 }}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            // onRefresh={onRefresh}
-          />
-        }
-      />
     </View>
   );
 };
@@ -367,7 +317,7 @@ const styles = StyleSheet.create({
     marginTop: 40,
   },
   iconBackground: {
-    backgroundColor: "#347355",
+    backgroundColor: "#114187",
     borderRadius: 50,
     padding: 20,
     width: 100,
@@ -390,7 +340,7 @@ const styles = StyleSheet.create({
   logoutButton: {
     marginBottom: 16,
     padding: 10,
-    backgroundColor: "#347355",
+    backgroundColor: "#114187",
     borderRadius: 4,
     width: 200,
     alignSelf: "center",
