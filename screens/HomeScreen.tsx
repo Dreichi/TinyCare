@@ -82,7 +82,7 @@ export default function HomeScreen({ navigation }: { navigation: any }) {
     { title: "Comment vas bébé ?", icon: "📝", screen: "BabyInfo" },
     { title: "Données", icon: "📈", screen: "Data" },
     { title: "Je viens voir bébé", icon: "📅", screen: "Appointment" },
-    { title: "Album photo", icon: "📷" },
+    { title: "Album photo", icon: "📷", disabled: true },
     { title: "Contacter l'infirmière", icon: "📞", screen: "NurseContact" },
   ];
 
@@ -90,19 +90,26 @@ export default function HomeScreen({ navigation }: { navigation: any }) {
     title: string;
     icon: string;
     screen?: string;
+    disabled?: boolean;
   }) => (
     <TouchableOpacity
-      style={styles.menuButton}
+      style={[
+        styles.menuButton,
+        item.disabled ? styles.menuButtonDisabled : null,
+      ]}
       key={item.title}
       onPress={() => {
-        if (item.screen && selectedChild) {
+        if (item.screen && selectedChild && !item.disabled) {
           navigation.navigate(item.screen, { baby_id: selectedChild.id });
         }
       }}
+      disabled={item.disabled}
     >
       <Text style={styles.menuIcon}>{item.icon}</Text>
-      <Text style={styles.menuText}>{item.title}</Text>
-      <Text style={styles.arrow}>➔</Text>
+      <Text style={[styles.menuText, item.disabled ? styles.menuTextDisabled : null]}>
+        {item.title}
+      </Text>
+      <Text style={[styles.arrow, item.disabled ? styles.arrowDisabled : null]}>➔</Text>
     </TouchableOpacity>
   );
 
@@ -130,7 +137,6 @@ export default function HomeScreen({ navigation }: { navigation: any }) {
         <View style={styles.header}>
           <Text style={styles.greeting}>👋 Bonjour, {userName}</Text>
           <View style={styles.childGroup}>
-            <Text style={styles.child}>Enfant</Text>
             <TouchableOpacity style={styles.customPicker} onPress={openModal}>
               <Text style={styles.customPickerText}>
                 {selectedChild
@@ -236,12 +242,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     width: "80%",
   },
-  child: {
-    color: "#000000",
-    fontSize: 16,
-    marginRight: 5,
-    alignItems: "flex-start",
-  },
   customPicker: {
     flexDirection: "row",
     alignItems: "center",
@@ -254,6 +254,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#000000",
     height: 20,
+    flex: 1,
   },
   location: {
     color: "#6F6F6F",
@@ -298,12 +299,19 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
   },
+  menuButtonDisabled: {
+    backgroundColor: "#E0E0E0",
+    borderColor: "#B0B0B0",
+  },
   menuText: {
     fontSize: 16,
     fontWeight: "500",
     color: "#6F6F6F",
     flex: 1,
     marginLeft: 10,
+  },
+  menuTextDisabled: {
+    color: "#A0A0A0",
   },
   menuIcon: {
     backgroundColor: "#A2BFE9",
@@ -323,6 +331,11 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     borderRadius: 18,
     borderColor: "#274C86",
+  },
+  arrowDisabled: {
+    color: "#A0A0A0",
+    backgroundColor: "#E0E0E0",
+    borderColor: "#B0B0B0",
   },
   modalContainer: {
     flex: 1,

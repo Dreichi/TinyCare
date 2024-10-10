@@ -8,8 +8,13 @@ import {
   TextInput,
   TouchableOpacity,
   Modal,
+  Image,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import moment from "moment";
+import "moment/locale/fr";
+
+moment.locale("fr");
 
 export default function Data({ navigation }) {
   const [isPinSet, setIsPinSet] = useState(false);
@@ -17,7 +22,8 @@ export default function Data({ navigation }) {
   const [confirmPin, setConfirmPin] = useState("");
   const [enteredPin, setEnteredPin] = useState("");
   const [showPinModal, setShowPinModal] = useState(false);
-  const [isConfirming, setIsConfirming] = useState(false);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [bloodPressureData, setBloodPressureData] = useState([]);
 
   useEffect(() => {
     const checkPin = async () => {
@@ -30,6 +36,18 @@ export default function Data({ navigation }) {
       }
     };
     checkPin();
+  }, []);
+
+  useEffect(() => {
+    // Generate random blood pressure data for the last 30 days
+    const generateBloodPressureData = () => {
+      const data = [];
+      for (let i = 0; i < 30; i++) {
+        data.push(Math.floor(Math.random() * (50 - 30 + 1)) + 30);
+      }
+      return data;
+    };
+    setBloodPressureData(generateBloodPressureData());
   }, []);
 
   const handleSetPin = async () => {
@@ -53,7 +71,36 @@ export default function Data({ navigation }) {
 
   const handleCancelPin = () => {
     setShowPinModal(false);
-    navigation.navigate("Home");
+    navigation.reset({
+      index: 0,
+      routes: [{ name: "Home" }],
+    });
+  };
+
+  const handlePrevDays = () => {
+    setCurrentIndex(currentIndex + 10);
+  };
+
+  const handleNextDays = () => {
+    if (currentIndex >= 10) {
+      setCurrentIndex(currentIndex - 10);
+    }
+  };
+
+  const getLastTenDays = () => {
+    const days = [];
+    for (let i = 0; i < 10; i++) {
+      const day = moment().subtract(currentIndex + i, "days");
+      days.push({
+        date: day.format("D"),
+        dayName: day.format("dd").charAt(0).toUpperCase(),
+      });
+    }
+    return days.reverse();
+  };
+
+  const getCurrentMonth = () => {
+    return moment().subtract(currentIndex, "days").format("MMMM YYYY");
   };
 
   return (
@@ -67,6 +114,7 @@ export default function Data({ navigation }) {
                 <TextInput
                   style={styles.input}
                   placeholder="Entrez un code PIN"
+                  placeholderTextColor={"#000"}
                   value={pin}
                   onChangeText={setPin}
                   keyboardType="numeric"
@@ -76,6 +124,7 @@ export default function Data({ navigation }) {
                 <TextInput
                   style={styles.input}
                   placeholder="Confirmez le code PIN"
+                  placeholderTextColor={"#000"}
                   value={confirmPin}
                   onChangeText={setConfirmPin}
                   keyboardType="numeric"
@@ -97,6 +146,7 @@ export default function Data({ navigation }) {
                 <TextInput
                   style={styles.input}
                   placeholder="Code PIN"
+                  placeholderTextColor={"#000"}
                   value={enteredPin}
                   onChangeText={setEnteredPin}
                   keyboardType="numeric"
@@ -122,37 +172,57 @@ export default function Data({ navigation }) {
       </Modal>
 
       <ScrollView contentContainerStyle={styles.scrollContainer}>
+        <Image
+          source={require("../assets/form.png")}
+          style={styles.topImage}
+        ></Image>
+        <Image
+          source={require("../assets/form.png")}
+          style={styles.botImage}
+        ></Image>
         <View style={styles.header}>
           <Text style={styles.headerTitle}>📈 Données du bébé</Text>
         </View>
 
-        <Text style={styles.currentDate}>Mercredi 09 octobre 2024</Text>
+        <Text style={styles.currentDate}>{moment().format("dddd D MMMM YYYY")}</Text>
 
         <View style={styles.chartContainer}>
-          <Text style={styles.chartTitle}>Tension artérielle</Text>
+          <Text style={styles.chartTitle}>Tension artérielle - {getCurrentMonth()}</Text>
           <View style={styles.customChartContainer}>
-            {[19, 25, 22, 30, 35, 40, 38, 45, 50, 55].map((value, index) => (
-              <View key={index} style={{ alignItems: "center" }}>
-                <View
-                  style={{
-                    ...styles.chartBar,
-                    height: value * 3,
-                    marginLeft: index === 0 ? 0 : 10,
-                    justifyContent: "flex-end",
-                    alignItems: "center",
-                  }}
-                >
-                  <Text style={styles.barValue}>{value}</Text>
+            {getLastTenDays().map((day, index) => {
+              const bloodPressureValue = bloodPressureData[currentIndex + index] || 0;
+              return (
+                <View key={index} style={{ alignItems: "center" }}>
+                  <View
+                    style={{
+                      ...styles.chartBar,
+                      height: bloodPressureValue * 3,
+                      marginLeft: index === 0 ? 0 : 10,
+                      justifyContent: "flex-end",
+                      alignItems: "center",
+                    }}
+                  >
+                    <Text style={styles.barValue}>{bloodPressureValue}</Text>
+                  </View>
+                  <Text style={styles.barLabel}>{day.date}</Text>
+                  <Text style={styles.barLabel}>{day.dayName}</Text>
                 </View>
-                <Text style={styles.barLabel}>{index + 1}</Text>
-              </View>
-            ))}
+              );
+            })}
+          </View>
+          <View style={styles.navigationButtons}>
+            <TouchableOpacity onPress={handlePrevDays} style={styles.navButton}>
+              <Text style={styles.navButtonText}>◀ 10 jours précédents</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={handleNextDays} style={styles.navButton}>
+              <Text style={styles.navButtonText}>10 jours suivants ▶</Text>
+            </TouchableOpacity>
           </View>
         </View>
 
         <View style={styles.dataContainer}>
           <View style={styles.dataCard}>
-            <Text style={styles.dataTitle}>Périmètre cranien</Text>
+            <Text style={styles.dataTitle}>Périmètre crânien</Text>
             <Text style={styles.dataValue}>21cm</Text>
           </View>
           <View style={styles.dataCard}>
@@ -197,17 +267,28 @@ const styles = StyleSheet.create({
     color: "#6A6A6A",
     marginVertical: 20,
   },
+  topImage: {
+    position: "absolute",
+    top: 100,
+    right: -300,
+    width: "100%",
+    height: 400,
+  },
+  botImage: {
+    position: "absolute",
+    bottom: -150,
+    left: -300,
+    width: "100%",
+    height: 300,
+  },
   chartContainer: {
     backgroundColor: "#FFFFFF",
     borderRadius: 20,
     padding: 20,
     marginHorizontal: 20,
     marginBottom: 20,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    borderColor: "#797979",
+    borderWidth: 0.5,
   },
   chartTitle: {
     fontSize: 16,
@@ -219,13 +300,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "flex-end",
     height: 180,
-    backgroundColor: "#f0f0f0",
     borderRadius: 10,
     padding: 10,
   },
   chartBar: {
     width: 20,
-    backgroundColor: "#5AA9E6",
+    backgroundColor: "#1DBF73",
     borderRadius: 5,
   },
   barValue: {
@@ -251,11 +331,8 @@ const styles = StyleSheet.create({
     padding: 20,
     marginBottom: 20,
     alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    borderColor: "#797979",
+    borderWidth: 0.5,
   },
   dataTitle: {
     fontSize: 14,
@@ -311,5 +388,19 @@ const styles = StyleSheet.create({
     color: "#274C86",
     fontSize: 16,
     textAlign: "center",
+  },
+  navigationButtons: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 20,
+  },
+  navButton: {
+    padding: 10,
+    backgroundColor: "#274C86",
+    borderRadius: 5,
+  },
+  navButtonText: {
+    color: "#FFF",
+    fontSize: 14,
   },
 });
