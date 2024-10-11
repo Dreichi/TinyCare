@@ -7,35 +7,31 @@ import {
   TouchableOpacity,
   ScrollView,
   ActivityIndicator,
-  Alert,
+  KeyboardAvoidingView,
   Platform,
-  Image,
+  Keyboard,
+  TouchableWithoutFeedback,
 } from "react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import axios from "axios";
+import { supabase } from "../utils/supabase";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import Icon from "react-native-vector-icons/Ionicons";
-import * as ImagePicker from "expo-image-picker";
-import FormData from "form-data";
-import Modal from "react-native-modal";
 
 interface Message {
   id: number;
   content: string;
-  createdAt: string;
-  senderId: number;
-  conversationId: string;
-  imageUrl?: string;
+  created_at: string;
+  sender_id: string;
+  conversation_id: string;
 }
 
 interface Profile {
-  id: number;
-  username: string;
-  userRole: string;
+  id: string;
+  name: string;
+  role: string;
 }
 
 type RootStackParamList = {
-  ChatScreen: { conversationId: number; otherUserName: string };
+  ChatScreen: { conversationId: string; otherUserName: string };
 };
 
 type Props = NativeStackScreenProps<RootStackParamList, "ChatScreen">;
@@ -46,102 +42,37 @@ export default function ChatScreen({ route, navigation }: Props) {
   const [newMessage, setNewMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [profile, setProfile] = useState<Profile>();
-  const userRole = profile?.userRole;
-  const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const [isModalVisible, setIsModalVisible] = useState(false);
-  const [reportDay, setReportDay] = useState("");
-  const [reportTimes, setReportTimes] = useState("");
-  const [reportDescription, setReportDescription] = useState("");
-  const [selectedReportImage, setSelectedReportImage] = useState<string | null>(
-    null
-  );
-
   const scrollViewRef = useRef<ScrollView>(null);
 
   useEffect(() => {
     navigation.setOptions({
       title: otherUserName,
-      headerRight: () =>
-        Number(userRole) === 2 && (
-          <TouchableOpacity
-            onPress={() => setIsModalVisible(true)}
-            style={{ marginRight: 10 }}
-          >
-            <Text style={{ color: "#347355", fontSize: 16 }}>
-              Faire un rapport
-            </Text>
-          </TouchableOpacity>
-        ),
     });
-    // fetchProfile();
-  }, [otherUserName, userRole]);
+    fetchProfile();
+    fetchMessages();
 
-  useEffect(() => {
-    (async () => {
-      if (Platform.OS !== "web") {
-        const { status: mediaLibraryStatus } =
-          await ImagePicker.requestMediaLibraryPermissionsAsync();
-        const { status: cameraStatus } =
-          await ImagePicker.requestCameraPermissionsAsync();
-
-        if (mediaLibraryStatus !== "granted" || cameraStatus !== "granted") {
-          alert(
-            "Sorry, we need camera, media library and location permissions to make this work!"
-          );
+    const channel = supabase
+      .channel("realtime messages")
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "messages",
+          filter: `conversation_id=eq.${conversationId}`,
+        },
+        (payload) => {
+          setMessages((prevMessages) => [...prevMessages, payload.new]);
         }
-      }
-    })();
-  }, []);
+      )
+      .subscribe();
 
-  // useEffect(() => {
-  //   if (profile?.id) {
-  //     fetchMessages();
-
-  //     const socket = new WebSocket(`${apiUrl.replace(/^http/, "ws")}`);
-
-  //     socket.onopen = () => {
-  //       console.log("WebSocket connected");
-  //       socket.send(
-  //         JSON.stringify({
-  //           type: "join_conversation",
-  //           conversationId,
-  //         })
-  //       );
-  //       console.log(`Joined conversation ${conversationId}`);
-  //     };
-
-  //     socket.onmessage = (event) => {
-  //       const message = JSON.parse(event.data);
-  //       console.log("New message:", message);
-  //       if (message.conversationId.toString() === conversationId.toString()) {
-  //         setMessages((prevMessages) => [...prevMessages, message]);
-  //       }
-  //     };
-
-  //     socket.onclose = (event) => {
-  //       console.log("WebSocket disconnected:", event.reason);
-  //     };
-
-  //     socket.onerror = (error) => {
-  //       console.log("WebSocket error:", error);
-  //     };
-
-  //     return () => {
-  //       socket.close();
-  //       console.log(
-  //         `Disconnected from WebSocket for conversation ${conversationId}`
-  //       );
-  //     };
-  //   }
-  //   console.log(`Profile ID: ${profile?.id}`);
-  // }, [profile?.id, conversationId, profile]);
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [conversationId]);
 
   useEffect(() => {
-    console.log(`profile username: ${profile?.username}`);
-    console.log(`userRole: ${profile?.userRole}`);
-  }, [profile?.userRole]);
-  useEffect(() => {
-    // Ensure messages are loaded before scrolling to end
     if (messages.length > 0) {
       setTimeout(() => {
         scrollViewRef.current?.scrollToEnd({ animated: true });
@@ -149,212 +80,60 @@ export default function ChatScreen({ route, navigation }: Props) {
     }
   }, [messages]);
 
-  // const fetchProfile = async () => {
-  //   try {
-  //     const token = await AsyncStorage.getItem("token");
-  //     if (token) {
-  //       const response = await axios.get(`${apiUrl}/users/profile`, {
-  //         headers: {
-  //           Authorization: `Bearer ${token}`,
-  //         },
-  //       });
-  //       if (response.status === 200) {
-  //         setProfile(response.data.data);
-  //       } else {
-  //         console.error("Failed to fetch profile data");
-  //       }
-  //     } else {
-  //       console.error("No token found in AsyncStorage");
-  //     }
-  //   } catch (error) {
-  //     console.error("Error fetching profile data:", error);
-  //   }
-  // };
+  const fetchProfile = async () => {
+    const { data: user } = await supabase.auth.getUser();
+    const userId = user.user?.id;
+    if (userId) {
+      const { data: profileData, error } = await supabase
+        .from("users")
+        .select("id, name, role")
+        .eq("id", userId)
+        .single();
 
-  // const fetchMessages = async () => {
-  //   setLoading(true);
-  //   try {
-  //     const token = await AsyncStorage.getItem("token");
-  //     if (token) {
-  //       const response = await axios.get(
-  //         `${apiUrl}/conversations/${conversationId}/messages`,
-  //         {
-  //           headers: {
-  //             Authorization: `Bearer ${token}`,
-  //           },
-  //         }
-  //       );
-  //       if (response.status === 200) {
-  //         setMessages(response.data.data);
-  //         setTimeout(() => {
-  //           scrollViewRef.current?.scrollToEnd({ animated: false });
-  //         }, 100);
-  //       } else {
-  //         console.error("Failed to fetch messages");
-  //       }
-  //     } else {
-  //       console.error("No token found in AsyncStorage");
-  //     }
-  //   } catch (error) {
-  //     console.error("Error fetching messages:", error);
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // };
-
-  const createImage = async (formData: any) => {
-    try {
-      const response = await axios({
-        method: "post",
-        url: "https://api.imgur.com/3/image",
-        data: formData,
-        headers: {
-          Authorization: `Client-ID 41e0d680636e63d`,
-          "Content-Type": "multipart/form-data",
-        },
-      });
-
-      return response.data.data.link;
-    } catch (error) {
-      console.log(error);
-      throw new Error("Image upload failed");
+      if (error) {
+        console.error("Failed to fetch profile data:", error.message);
+      } else {
+        setProfile(profileData);
+      }
+    } else {
+      console.error("No user is logged in");
     }
   };
 
-  // const handleSendMessage = async () => {
-  //   if (!newMessage.trim() && !selectedImage) {
-  //     Alert.alert("Error", "Message or image cannot be empty");
-  //     return;
-  //   }
-  //   setLoading(true);
-  //   try {
-  //     const token = await AsyncStorage.getItem("token");
-  //     if (token) {
-  //       let imageUrl = null;
-  //       if (selectedImage) {
-  //         const formData = new FormData();
-  //         formData.append("image", {
-  //           uri: selectedImage,
-  //           name: "image.jpg",
-  //           type: "image/jpeg",
-  //         });
+  const fetchMessages = async () => {
+    setLoading(true);
+    const { data: messagesData, error } = await supabase
+      .from("messages")
+      .select("id, content, created_at, sender_id, conversation_id")
+      .eq("conversation_id", conversationId)
+      .order("created_at", { ascending: true });
 
-  //         imageUrl = await createImage(formData);
-  //       }
-
-  //       const response = await axios.post(
-  //         `${apiUrl}/messages`,
-  //         {
-  //           content: newMessage,
-  //           imageUrl,
-  //           senderId: profile?.id,
-  //           conversationId,
-  //         },
-  //         {
-  //           headers: {
-  //             Authorization: `Bearer ${token}`,
-  //             "Content-Type": "application/json",
-  //           },
-  //         }
-  //       );
-
-  //       if (response.status === 201) {
-  //         setNewMessage("");
-  //         setSelectedImage(null);
-  //         fetchMessages();
-  //       } else {
-  //         console.error("Failed to send message");
-  //       }
-  //     } else {
-  //       console.error("No token found in AsyncStorage");
-  //     }
-  //   } catch (error) {
-  //     console.error("Error sending message:", error);
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // };
-
-  // const handleSendReport = async () => {
-  //   if (!reportDay.trim() || !reportTimes.trim() || !reportDescription.trim()) {
-  //     Alert.alert("Error", "All fields must be filled out");
-  //     return;
-  //   }
-  //   setLoading(true);
-  //   try {
-  //     const token = await AsyncStorage.getItem("token");
-  //     if (token) {
-  //       let imageUrl = null;
-  //       if (selectedReportImage) {
-  //         const formData = new FormData();
-  //         formData.append("image", {
-  //           uri: selectedReportImage,
-  //           name: "image.jpg",
-  //           type: "image/jpeg",
-  //         });
-
-  //         imageUrl = await createImage(formData);
-  //       }
-
-  //       const content = `Rapport du ${reportDay}\nNombre de fois arrosé: ${reportTimes}\nDescription: ${reportDescription}`;
-  //       const response = await axios.post(
-  //         `${apiUrl}/messages`,
-  //         {
-  //           content,
-  //           imageUrl,
-  //           senderId: profile?.id,
-  //           conversationId,
-  //         },
-  //         {
-  //           headers: {
-  //             Authorization: `Bearer ${token}`,
-  //             "Content-Type": "application/json",
-  //           },
-  //         }
-  //       );
-
-  //       if (response.status === 201) {
-  //         setReportDay("");
-  //         setReportTimes("");
-  //         setReportDescription("");
-  //         setSelectedReportImage(null);
-  //         setIsModalVisible(false);
-  //         fetchMessages();
-  //       } else {
-  //         console.error("Failed to send report");
-  //       }
-  //     } else {
-  //       console.error("No token found in AsyncStorage");
-  //     }
-  //   } catch (error) {
-  //     console.error("Error sending report:", error);
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // };
-
-  const pickImage = async () => {
-    let result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      quality: 1,
-    });
-
-    if (!result.canceled) {
-      setSelectedImage(result.assets[0].uri);
+    if (error) {
+      console.error("Failed to fetch messages:", error.message);
+    } else {
+      setMessages(messagesData || []);
     }
+    setLoading(false);
   };
 
-  const pickReportImage = async () => {
-    let result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      quality: 1,
+  const handleSendMessage = async () => {
+    if (!newMessage.trim()) {
+      alert("Message cannot be empty");
+      return;
+    }
+    setLoading(true);
+    const { error } = await supabase.from("messages").insert({
+      content: newMessage,
+      sender_id: profile?.id,
+      conversation_id: conversationId,
     });
 
-    if (!result.canceled) {
-      setSelectedReportImage(result.assets[0].uri);
+    if (error) {
+      console.error("Failed to send message:", error.message);
+    } else {
+      setNewMessage("");
     }
+    setLoading(false);
   };
 
   const formatDate = (dateString: string): string => {
@@ -369,124 +148,77 @@ export default function ChatScreen({ route, navigation }: Props) {
   };
 
   return (
-    <View style={styles.container}>
-      <ScrollView ref={scrollViewRef}>
-        {loading ? (
-          <ActivityIndicator size="large" color="#347355" />
-        ) : (
-          <View style={styles.messagesSection}>
-            {messages.length > 0 ? (
-              messages.map((message) => (
-                <View
-                  key={message.id}
-                  style={[
-                    styles.messageContainer,
-                    message.senderId === profile?.id
-                      ? styles.sentMessage
-                      : styles.receivedMessage,
-                  ]}
-                >
-                  {message.imageUrl && (
-                    <Image
-                      source={{ uri: message.imageUrl }}
-                      style={styles.messageImage}
-                    />
-                  )}
-                  <Text style={styles.messageContent}>{message.content}</Text>
-                  <Text style={styles.messageDate}>
-                    {formatDate(message.createdAt)}
-                  </Text>
-                </View>
-              ))
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      keyboardVerticalOffset={Platform.select({ ios: 90, android: 0 })}
+    >
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+        <View style={styles.container}>
+          <ScrollView
+            ref={scrollViewRef}
+            contentContainerStyle={{ paddingBottom: 20 }}
+          >
+            {loading ? (
+              <ActivityIndicator size="large" color="#114187" />
             ) : (
-              <Text style={styles.noMessagesText}>
-                Aucun message pour l'instant.
-              </Text>
+              <View style={styles.messagesSection}>
+                {messages.length > 0 ? (
+                  messages.map((message) => (
+                    <View
+                      key={message.id}
+                      style={
+                        message.sender_id === profile?.id
+                          ? [styles.messageContainer, styles.sentMessage]
+                          : [styles.messageContainer, styles.receivedMessage]
+                      }
+                    >
+                      <Text
+                        style={
+                          message.sender_id === profile?.id
+                            ? styles.sentMessageText
+                            : styles.receivedMessageText
+                        }
+                      >
+                        {message.content}
+                      </Text>
+                      <Text
+                        style={
+                          message.sender_id === profile?.id
+                            ? styles.sentMessageDate
+                            : styles.receivedMessageDate
+                        }
+                      >
+                        {formatDate(message.created_at)}
+                      </Text>
+                    </View>
+                  ))
+                ) : (
+                  <Text style={styles.noMessagesText}>
+                    Aucun message pour l'instant.
+                  </Text>
+                )}
+              </View>
             )}
+          </ScrollView>
+          <View style={styles.send}>
+            <TextInput
+              style={styles.messageInput}
+              placeholder="Envoyer un message..."
+              value={newMessage}
+              onChangeText={setNewMessage}
+            />
+            <TouchableOpacity
+              style={styles.sendButton}
+              onPress={handleSendMessage}
+              disabled={loading}
+            >
+              <Icon name="send" size={24} color="#FFF" />
+            </TouchableOpacity>
           </View>
-        )}
-      </ScrollView>
-      {selectedImage && (
-        <View style={styles.previewContainer}>
-          <Image source={{ uri: selectedImage }} style={styles.previewImage} />
-          <TouchableOpacity
-            onPress={() => setSelectedImage(null)}
-            style={styles.removeImageButton}
-          >
-            <Icon name="close-circle" size={24} color="#FF0000" />
-          </TouchableOpacity>
         </View>
-      )}
-      <View style={styles.send}>
-        <TextInput
-          style={styles.messageInput}
-          placeholder="Envoyer un message..."
-          value={newMessage}
-          onChangeText={setNewMessage}
-        />
-        <TouchableOpacity onPress={pickImage} style={styles.clipIcon}>
-          <Icon name="attach" size={24} color="#347355" />
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.sendButton}
-          // onPress={handleSendMessage}
-          disabled={loading}
-        >
-          <Icon name="send" size={24} color="#FFF" />
-        </TouchableOpacity>
-      </View>
-      <Modal
-        isVisible={isModalVisible}
-        onBackdropPress={() => setIsModalVisible(false)}
-        style={styles.modal}
-      >
-        <View style={styles.modalContent}>
-          <Text style={styles.modalTitle}>Faire un rapport</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Jour"
-            value={reportDay}
-            onChangeText={setReportDay}
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="Nombre de fois arrosé"
-            value={reportTimes}
-            onChangeText={setReportTimes}
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="Description"
-            value={reportDescription}
-            onChangeText={setReportDescription}
-          />
-          {selectedReportImage && (
-            <View style={styles.previewContainer}>
-              <Image
-                source={{ uri: selectedReportImage }}
-                style={styles.previewImage}
-              />
-              <TouchableOpacity
-                onPress={() => setSelectedReportImage(null)}
-                style={styles.removeImageButton}
-              >
-                <Icon name="close-circle" size={24} color="#FF0000" />
-              </TouchableOpacity>
-            </View>
-          )}
-          <TouchableOpacity onPress={pickReportImage} style={styles.clipIcon}>
-            <Icon name="attach" size={24} color="#347355" />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.modalButton}
-            // onPress={handleSendReport}
-            disabled={loading}
-          >
-            <Text style={styles.modalButtonText}>Envoyer</Text>
-          </TouchableOpacity>
-        </View>
-      </Modal>
-    </View>
+      </TouchableWithoutFeedback>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -494,12 +226,11 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 0,
-    backgroundColor: "#F5F5F5",
+    backgroundColor: "#F2F0FF",
   },
   messagesSection: {
     marginTop: 20,
     paddingHorizontal: 10,
-    paddingBottom: 20,
   },
   messageContainer: {
     marginBottom: 15,
@@ -512,19 +243,29 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 3 },
   },
   sentMessage: {
-    backgroundColor: "#DCF8C6",
     alignSelf: "flex-end",
+    backgroundColor: "#114187",
   },
   receivedMessage: {
-    backgroundColor: "#FFF",
     alignSelf: "flex-start",
+    backgroundColor: "#FFF",
   },
-  messageContent: {
+  sentMessageText: {
     fontSize: 16,
+    color: "#FFF",
   },
-  messageDate: {
+  receivedMessageText: {
+    fontSize: 16,
+    color: "#000",
+  },
+  sentMessageDate: {
     fontSize: 12,
-    color: "gray",
+    color: "#FFF",
+    textAlign: "right",
+  },
+  receivedMessageDate: {
+    fontSize: 12,
+    color: "#000",
     textAlign: "right",
   },
   noMessagesText: {
@@ -544,15 +285,11 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFF",
   },
   sendButton: {
-    backgroundColor: "#347355",
+    backgroundColor: "#114187",
     padding: 10,
     borderRadius: 25,
     alignItems: "center",
     justifyContent: "center",
-  },
-  sendButtonText: {
-    color: "#FFF",
-    fontSize: 16,
   },
   send: {
     flexDirection: "row",
@@ -562,78 +299,5 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderColor: "#E8E8E8",
     backgroundColor: "#FFF",
-  },
-  clipIcon: {
-    margin: 10,
-  },
-  messageImage: {
-    width: 200,
-    height: 200,
-    borderRadius: 10,
-    marginBottom: 10,
-  },
-  previewContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 10,
-  },
-  previewImage: {
-    width: 100,
-    height: 100,
-    borderRadius: 10,
-    marginRight: 10,
-  },
-  removeImageButton: {
-    padding: 5,
-  },
-  reportButton: {
-    position: "absolute",
-    bottom: 100,
-    right: 20,
-    backgroundColor: "#347355",
-    padding: 10,
-    borderRadius: 25,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  reportButtonText: {
-    color: "#FFF",
-    fontSize: 16,
-  },
-  modal: {
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  modalContent: {
-    width: "80%",
-    backgroundColor: "#FFF",
-    borderRadius: 10,
-    padding: 20,
-    alignItems: "center",
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    marginBottom: 10,
-  },
-  input: {
-    width: "100%",
-    borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 10,
-    padding: 10,
-    marginBottom: 10,
-  },
-  modalButton: {
-    backgroundColor: "#347355",
-    padding: 10,
-    borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
-    width: "100%",
-  },
-  modalButtonText: {
-    color: "#FFF",
-    fontSize: 16,
   },
 });

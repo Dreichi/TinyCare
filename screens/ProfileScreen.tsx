@@ -10,19 +10,27 @@ import {
 import { FontAwesome, MaterialIcons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useNavigation } from "@react-navigation/native";
+import { supabase } from "../utils/supabase";
 
 const UserProfile = () => {
   const [username, setUsername] = useState("");
+  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
   const navigation = useNavigation();
 
-  // Récupérer l'username depuis AsyncStorage
   useEffect(() => {
     const getUsername = async () => {
       try {
-        const storedUsername = await AsyncStorage.getItem("username");
-        if (storedUsername) {
-          setUsername(storedUsername);
-        }
+        const user = await supabase.auth.getUser();
+        const userId = user.data.user?.id;
+        const { data } = await supabase
+          .from("users")
+          .select("*")
+          .eq("id", userId)
+          .single();
+        setUsername(data?.name);
+        setPhone(data?.phonenumber);
+        setEmail(data?.mail);
       } catch (error) {
         console.log("Erreur lors de la récupération de l'username:", error);
       }
@@ -32,7 +40,7 @@ const UserProfile = () => {
   }, []);
 
   const handleLogout = async () => {
-    await AsyncStorage.removeItem("token");
+    await supabase.auth.signOut();
     navigation.navigate("Login");
   };
 
@@ -43,13 +51,13 @@ const UserProfile = () => {
         <View style={styles.iconBackground}>
           <FontAwesome name="user" size={60} color="white" />
         </View>
-        <Text style={styles.userName}>Thery Mathys</Text>
-        <Text style={styles.infos}>mathysthery@gmail.com | 06 06 06 06 06</Text>
+        <Text style={styles.userName}>{username}</Text>
+        <Text style={styles.infos}>
+          {email} | {phone}
+        </Text>
       </View>
 
-      {/* Cards section */}
       <View style={styles.cardContainer}>
-        {/* Card 1 */}
         <View style={styles.card}>
           <View style={styles.cardItem}>
             <MaterialIcons name="edit" size={24} color="#797979" />
@@ -133,12 +141,12 @@ const styles = StyleSheet.create({
   userName: {
     fontSize: 16,
     color: "#6F6F6F",
-    fontFamily: "Montserrat",
+    fontFamily: "Palanquin",
   },
   infos: {
     fontSize: 12,
     color: "#6F6F6F",
-    fontFamily: "Montserrat",
+    fontFamily: "Palanquin",
   },
   cardContainer: {
     paddingHorizontal: 20,
@@ -164,7 +172,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#797979",
     marginLeft: 15,
-    fontFamily: "Montserrat",
+    fontFamily: "Palanquin",
   },
   cardValue: {
     color: "#274C86",
@@ -185,7 +193,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "bold",
     textAlign: "center",
-    fontFamily: "Montserrat_600SemiBold",
+    fontFamily: "Palanquin_600SemiBold",
   },
 });
 

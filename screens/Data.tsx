@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
   Modal,
   Image,
+  Platform,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import moment from "moment";
@@ -39,7 +40,6 @@ export default function Data({ navigation }) {
   }, []);
 
   useEffect(() => {
-    // Generate random blood pressure data for the last 30 days
     const generateBloodPressureData = () => {
       const data = [];
       for (let i = 0; i < 30; i++) {
@@ -181,16 +181,21 @@ export default function Data({ navigation }) {
           style={styles.botImage}
         ></Image>
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>📈 Données du bébé</Text>
+          <Text style={styles.greeting}>📈 Données du bébé</Text>
         </View>
 
-        <Text style={styles.currentDate}>{moment().format("dddd D MMMM YYYY")}</Text>
+        <Text style={styles.currentDate}>
+          {moment().format("dddd D MMMM YYYY")}
+        </Text>
 
         <View style={styles.chartContainer}>
-          <Text style={styles.chartTitle}>Tension artérielle - {getCurrentMonth()}</Text>
+          <Text style={styles.chartTitle}>
+            Tension artérielle - {getCurrentMonth()}
+          </Text>
           <View style={styles.customChartContainer}>
             {getLastTenDays().map((day, index) => {
-              const bloodPressureValue = bloodPressureData[currentIndex + index] || 0;
+              const bloodPressureValue =
+                bloodPressureData[currentIndex + index] || 0;
               return (
                 <View key={index} style={{ alignItems: "center" }}>
                   <View
@@ -254,12 +259,15 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: 35,
     borderBottomRightRadius: 35,
     padding: 20,
-    alignItems: "center",
+    marginBottom: 20,
+    height: Platform.OS === "ios" ? 100 : 130,
   },
-  headerTitle: {
+  greeting: {
     color: "#FFFFFF",
     fontSize: 24,
     fontWeight: "bold",
+    textAlign: "center",
+    paddingTop: Platform.OS === "android" ? 40 : 15,
   },
   currentDate: {
     fontSize: 18,
@@ -302,6 +310,7 @@ const styles = StyleSheet.create({
     height: 180,
     borderRadius: 10,
     padding: 10,
+    marginTop: 10,
   },
   chartBar: {
     width: 20,

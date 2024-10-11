@@ -23,6 +23,7 @@ export default function SignupScreen({ navigation }: any) {
   const [password, setPassword] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
   const [loading, setLoading] = useState(false);
   const [isChecked, setIsChecked] = useState(false);
 
@@ -46,6 +47,8 @@ export default function SignupScreen({ navigation }: any) {
         id: data.user?.id,
         role: "parent",
         name: firstName + " " + lastName,
+        phonenumber: phoneNumber,
+        mail: data.user?.email,
       });
 
       if (error) {
@@ -77,7 +80,6 @@ export default function SignupScreen({ navigation }: any) {
             />
           </View>
 
-          {/* Form Container */}
           <View style={styles.formContainer}>
             <Text style={styles.title}>INSCRIPTION</Text>
 
@@ -122,6 +124,18 @@ export default function SignupScreen({ navigation }: any) {
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry
+                style={styles.input}
+              />
+            </View>
+
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>Numéro de téléphone</Text>
+              <TextInput
+                placeholder="Entrez votre numéro de téléphone"
+                placeholderTextColor="gray"
+                value={phoneNumber}
+                onChangeText={setPhoneNumber}
+                keyboardType="phone-pad"
                 style={styles.input}
               />
             </View>
@@ -201,7 +215,7 @@ const styles = StyleSheet.create({
     marginBottom: 32,
     textAlign: "center",
     color: "rgba(17, 65, 135, 1)",
-    fontFamily: "Montserrat_600SemiBold",
+    fontFamily: "Palanquin_600SemiBold",
     marginTop: 16,
   },
   inputContainer: {
@@ -214,7 +228,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#000",
     marginBottom: 4,
-    fontFamily: "Montserrat_600SemiBold",
+    fontFamily: "Palanquin_600SemiBold",
   },
   input: {
     height: 50,
@@ -225,7 +239,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     backgroundColor: "#FFFFFF",
     color: "#000",
-    fontFamily: "Montserrat_400Regular",
+    fontFamily: "Palanquin_400Regular",
   },
   switchContainer: {
     flexDirection: "row",
@@ -237,7 +251,7 @@ const styles = StyleSheet.create({
   switchText: {
     fontSize: 14,
     color: "#000",
-    fontFamily: "Montserrat_400Regular",
+    fontFamily: "Palanquin_400Regular",
     marginLeft: 8,
   },
   link: {
@@ -257,7 +271,7 @@ const styles = StyleSheet.create({
   textSubmit: {
     color: "white",
     textAlign: "center",
-    fontFamily: "Montserrat_600SemiBold",
+    fontFamily: "Palanquin_600SemiBold",
   },
   textLink: {
     color: "#849CCE",

@@ -1,234 +1,267 @@
-// import React, { useEffect, useState } from "react";
-// import {
-//   StyleSheet,
-//   Text,
-//   View,
-//   ActivityIndicator,
-//   ScrollView,
-//   RefreshControl,
-//   TouchableOpacity,
-//   Platform,
-// } from "react-native";
-// import AsyncStorage from "@react-native-async-storage/async-storage";
-// import axios from "axios";
-// import apiUrl from "../api";
+import React, { useEffect, useState } from "react";
+import {
+  StyleSheet,
+  Text,
+  View,
+  ActivityIndicator,
+  ScrollView,
+  RefreshControl,
+  TouchableOpacity,
+  Platform,
+  Image,
+} from "react-native";
+import { supabase } from "../utils/supabase";
 
-// type User = {
-//   id: number;
-//   username: string;
-// };
+type User = {
+  id: string;
+  username: string;
+};
 
-// type Message = {
-//   content: string;
-//   createdAt: string;
-// };
+type Message = {
+  content: string;
+  createdAt: string;
+};
 
-// type Conversation = {
-//   id: number;
-//   User1: User;
-//   User2: User;
-//   lastMessage?: Message;
-// };
+type Conversation = {
+  id: string;
+  user1: User;
+  user2: User;
+  lastMessage?: Message;
+};
 
-// type Profile = {
-//   id: number;
-//   username: string;
-// };
+type Profile = {
+  id: string;
+  name: string;
+};
 
-// type MessageScreenProps = {
-//   route: any;
-//   navigation: any;
-// };
+type MessageScreenProps = {
+  route: any;
+  navigation: any;
+};
 
-// export default function MessageScreen({
-//   route,
-//   navigation,
-// }: MessageScreenProps) {
-//   const [conversations, setConversations] = useState<Conversation[]>([]);
-//   const [loading, setLoading] = useState<boolean>(false);
-//   const [refreshing, setRefreshing] = useState<boolean>(false);
-//   const [profile, setProfile] = useState<Profile>({} as Profile);
-//   const [unreadConversations, setUnreadConversations] = useState<number[]>([]);
+export default function MessageScreen({
+  route,
+  navigation,
+}: MessageScreenProps) {
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [refreshing, setRefreshing] = useState<boolean>(false);
+  const [profile, setProfile] = useState<Profile>({} as Profile);
 
-//   useEffect(() => {
-//     fetchProfile();
-//   }, []);
+  useEffect(() => {
+    fetchProfile();
+  }, []);
 
-//   useEffect(() => {
-//     if (profile.id) {
-//       fetchConversations();
-//     }
-//   }, [profile.id]);
+  useEffect(() => {
+    if (profile.id) {
+      fetchConversations();
+    }
+  }, [profile.id]);
 
-//   const fetchProfile = async () => {
-//     try {
-//       const token = await AsyncStorage.getItem("token");
-//       if (token) {
-//         const response = await axios.get(`${apiUrl}/users/profile`, {
-//           headers: {
-//             Authorization: `Bearer ${token}`,
-//           },
-//         });
-//         if (response.status === 200) {
-//           setProfile(response.data.data);
-//         } else {
-//           console.error("Failed to fetch profile data");
-//         }
-//       } else {
-//         console.error("No token found in AsyncStorage");
-//       }
-//     } catch (error) {
-//       console.error("Error fetching profile data:", error);
-//     }
-//   };
+  const fetchProfile = async () => {
+    const { data: user } = await supabase.auth.getUser();
+    const userId = user.user?.id;
 
-//   const fetchConversations = async () => {
-//     setLoading(true);
-//     try {
-//       const token = await AsyncStorage.getItem("token");
-//       if (token) {
-//         const response = await axios.get(
-//           `${apiUrl}/conversations/${profile.id}`,
-//           {
-//             headers: {
-//               Authorization: `Bearer ${token}`,
-//             },
-//           }
-//         );
-//         if (response.status === 200) {
-//           setConversations(response.data.data);
-//         } else {
-//           console.error("Failed to fetch conversations");
-//         }
-//       } else {
-//         console.error("No token found in AsyncStorage");
-//       }
-//     } catch (error) {
-//       console.error("Error fetching conversations:", error);
-//     } finally {
-//       setLoading(false);
-//     }
-//   };
+    if (user) {
+      const { data: profileData, error } = await supabase
+        .from("users")
+        .select("id, name")
+        .eq("id", userId)
+        .single();
 
-//   const handleOpenConversation = (conversation: Conversation) => {
-//     const otherUserName =
-//       conversation.User1.username === profile.username
-//         ? conversation.User2.username
-//         : conversation.User1.username;
-//     navigation.navigate("ChatScreen", {
-//       conversationId: conversation.id,
-//       otherUserName: otherUserName,
-//     });
-//   };
+      if (error) {
+        console.error("Failed to fetch profile data:", error.message);
+      } else {
+        setProfile(profileData);
+      }
+    } else {
+      console.error("No user is logged in");
+    }
+  };
 
-//   const onRefresh = async () => {
-//     setRefreshing(true);
-//     await fetchConversations();
-//     setRefreshing(false);
-//   };
+  const fetchConversations = async () => {
+    setLoading(true);
 
-//   return (
-//     <View style={styles.container}>
-//       <ScrollView
-//         refreshControl={
-//           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-//         }
-//       >
-//         {loading ? (
-//           <ActivityIndicator size="large" color="#347355" />
-//         ) : (
-//           <View style={styles.conversationsSection}>
-//             <Text style={styles.conversationTitle}>Vos messages</Text>
-//             {conversations.length > 0 ? (
-//               conversations.map((conversation, index) => (
-//                 <TouchableOpacity
-//                   key={conversation.id}
-//                   style={[
-//                     styles.conversationContainer,
-//                     index === 0 && styles.firstConversationContainer,
-//                   ]}
-//                   onPress={() => handleOpenConversation(conversation)}
-//                 >
-//                   <View style={styles.customFlex}>
-//                     <Text style={styles.conversationName}>
-//                       {conversation.User1.username === profile.username
-//                         ? conversation.User2.username
-//                         : conversation.User1.username}
-//                     </Text>
-//                     <Text
-//                       style={styles.lastMessage}
-//                       numberOfLines={2}
-//                       ellipsizeMode="tail"
-//                     >
-//                       {conversation.lastMessage?.content || "No messages yet"}
-//                     </Text>
-//                   </View>
-//                 </TouchableOpacity>
-//               ))
-//             ) : (
-//               <Text style={styles.noConversationsText}>
-//                 Aucune conversation pour l'instant.
-//               </Text>
-//             )}
-//           </View>
-//         )}
-//       </ScrollView>
-//     </View>
-//   );
-// }
+    const { data: conversationsData, error } = await supabase
+      .from("conversations")
+      .select(
+        `
+        id,
+        user1: user1_id ( id, name ),
+        user2: user2_id ( id, name ),
+        last_message
+      `
+      )
+      .or(`user1_id.eq.${profile.id},user2_id.eq.${profile.id}`);
 
-// const styles = StyleSheet.create({
-//   container: {
-//     paddingTop: Platform.OS === "android" ? 32 : 0,
-//     flex: 1,
-//   },
-//   conversationTitle: {
-//     marginBottom: 16,
-//     fontSize: 28,
-//     fontFamily: "Montserrat_600SemiBold",
-//     textAlign: "center",
-//     color: "#347355",
-//     textTransform: "uppercase",
-//   },
-//   conversationsSection: {
-//     marginTop: 20,
-//     display: "flex",
-//     flexDirection: "column",
-//     justifyContent: "center",
-//     alignItems: "center",
-//     gap: 0,
-//   },
-//   customFlex: {
-//     display: "flex",
-//     flexDirection: "column",
-//     justifyContent: "space-between",
-//     width: "100%",
-//     alignContent: "flex-start",
-//     alignItems: "flex-start",
-//     gap: 4,
-//   },
-//   conversationContainer: {
-//     padding: 10,
-//     height: 70,
-//     borderBottomWidth: 1,
-//     borderColor: "grey",
-//     width: "100%",
-//   },
-//   firstConversationContainer: {
-//     borderTopWidth: 1,
-//   },
-//   conversationName: {
-//     fontSize: 16,
-//     fontWeight: "bold",
-//   },
-//   lastMessage: {
-//     fontSize: 14,
-//     color: "gray",
-//   },
-//   noConversationsText: {
-//     fontSize: 16,
-//     color: "gray",
-//     textAlign: "center",
-//     marginTop: 20,
-//   },
-// });
+    if (error) {
+      console.error("Failed to fetch conversations:", error.message);
+    } else {
+      const conversationWithMessages = await Promise.all(
+        conversationsData.map(async (conversation) => {
+          const { data: lastMessageData } = await supabase
+            .from("messages")
+            .select("content, created_at")
+            .eq("conversation_id", conversation.id)
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .single();
+
+          return {
+            ...conversation,
+            lastMessage: lastMessageData
+              ? {
+                  content: lastMessageData.content,
+                  createdAt: lastMessageData.created_at,
+                }
+              : undefined,
+          };
+        })
+      );
+      setConversations(conversationWithMessages);
+    }
+    setLoading(false);
+  };
+
+  const handleOpenConversation = (conversation: Conversation) => {
+    const otherUserName =
+      conversation.user1.id === profile.id
+        ? conversation.user2.name
+        : conversation.user1.name;
+
+    navigation.navigate("ChatScreen", {
+      conversationId: conversation.id,
+      otherUserName: otherUserName,
+    });
+  };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await fetchConversations();
+    setRefreshing(false);
+  };
+
+  return (
+    <View style={styles.container}>
+      <ScrollView
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      >
+        <View style={styles.header}>
+          <Text style={styles.greeting}>💬 Contacter le soignant</Text>
+        </View>
+        {loading ? (
+          <ActivityIndicator size="large" color="#114187" />
+        ) : (
+          <View style={styles.conversationsSection}>
+            {conversations.length > 0 ? (
+              conversations.map((conversation, index) => (
+                <TouchableOpacity
+                  key={conversation.id}
+                  style={[
+                    styles.conversationContainer,
+                    index === 0 && styles.firstConversationContainer,
+                  ]}
+                  onPress={() => handleOpenConversation(conversation)}
+                >
+                  <View style={styles.customFlex}>
+                    <Text style={styles.conversationName}>
+                      {conversation.user1.id === profile.id
+                        ? conversation.user2.name
+                        : conversation.user1.name}
+                    </Text>
+                    <Text
+                      style={styles.lastMessage}
+                      numberOfLines={2}
+                      ellipsizeMode="tail"
+                    >
+                      {conversation.lastMessage?.content ||
+                        "Pas encore de message..."}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              ))
+            ) : (
+              <Text style={styles.noConversationsText}>
+                Aucune conversation pour l'instant.
+              </Text>
+            )}
+          </View>
+        )}
+      </ScrollView>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    // paddingTop: Platform.OS === "android" ? 32 : 0,
+    flex: 1,
+  },
+  conversationTitle: {
+    marginBottom: 16,
+    fontSize: 28,
+    fontFamily: "Palanquin_600SemiBold",
+    textAlign: "center",
+    color: "#347355",
+    textTransform: "uppercase",
+  },
+  header: {
+    backgroundColor: "#274C86",
+    borderBottomLeftRadius: 35,
+    borderBottomRightRadius: 35,
+    padding: 20,
+    marginBottom: 20,
+    height: Platform.OS === "ios" ? 100 : 130,
+  },
+  greeting: {
+    color: "#FFFFFF",
+    fontSize: 24,
+    fontWeight: "bold",
+    textAlign: "center",
+    paddingTop: Platform.OS === "android" ? 40 : 15,
+  },
+  conversationsSection: {
+    marginTop: 20,
+    display: "flex",
+    flexDirection: "column",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 0,
+    paddingHorizontal: 32,
+  },
+  customFlex: {
+    display: "flex",
+    flexDirection: "column",
+    justifyContent: "space-between",
+    width: "100%",
+    alignContent: "flex-start",
+    alignItems: "flex-start",
+    gap: 4,
+  },
+  conversationContainer: {
+    padding: 10,
+    height: 70,
+    borderBottomWidth: 1,
+    borderColor: "grey",
+    width: "100%",
+  },
+  firstConversationContainer: {
+    borderTopWidth: 1,
+  },
+  conversationName: {
+    fontSize: 16,
+    fontWeight: "bold",
+  },
+  lastMessage: {
+    fontSize: 14,
+    color: "gray",
+  },
+  noConversationsText: {
+    fontSize: 16,
+    color: "gray",
+    textAlign: "center",
+    marginTop: 20,
+  },
+});

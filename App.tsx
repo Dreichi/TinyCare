@@ -10,11 +10,11 @@ import HomeManager from "./screens/HomeManager";
 import { View, ActivityIndicator, SafeAreaView } from "react-native";
 import {
   useFonts,
-  Montserrat_400Regular,
-  Montserrat_500Medium,
-  Montserrat_600SemiBold,
-  Montserrat_700Bold,
-} from "@expo-google-fonts/montserrat";
+  Palanquin_400Regular,
+  Palanquin_500Medium,
+  Palanquin_600SemiBold,
+  Palanquin_700Bold,
+} from "@expo-google-fonts/palanquin";
 import { EmailProvider } from "./context/EmailContext";
 import ChatScreen from "./screens/ChatScreen";
 import TermsScreen from "./screens/TermsScreen";
@@ -28,6 +28,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import Data from "./screens/Data";
 import ManagerAppointment from "./screens/ManagerAppointment";
 import NurseContact from "./screens/NurseContact";
+import MessageScreen from "./screens/MessageScreen";
 
 LogBox.ignoreLogs(["Warning: ..."]);
 LogBox.ignoreAllLogs();
@@ -66,6 +67,11 @@ function HomeStack() {
         component={Data}
         options={{ headerShown: false }}
       />
+      <Stack.Screen
+        name="NurseContact"
+        component={NurseContact}
+        options={{ headerShown: false }}
+      />
     </Stack.Navigator>
   );
 }
@@ -92,16 +98,23 @@ function UserTabs() {
             iconName = "home";
           } else if (route.name === "Profile") {
             iconName = "user";
-          }
+          } else if (route.name === "Message") iconName = "comment";
+
           return <FontAwesome name={iconName} size={size} color={color} />;
         },
         tabBarActiveTintColor: "#114187",
         tabBarInactiveTintColor: "gray",
+        tabBarShowLabel: false,
       })}
     >
       <Tab.Screen
         name="Home"
         component={HomeStack}
+        options={{ headerShown: false }}
+      />
+      <Tab.Screen
+        name="Message"
+        component={MessageScreen}
         options={{ headerShown: false }}
       />
       <Tab.Screen
@@ -123,11 +136,14 @@ function ManagerTabs() {
             iconName = "briefcase";
           } else if (route.name === "Profile") {
             iconName = "user";
-          }
+          } else if (route.name === "MessageScreen")
+            iconName = "message-square";
+
           return <FontAwesome name={iconName} size={size} color={color} />;
         },
         tabBarActiveTintColor: "#114187",
         tabBarInactiveTintColor: "gray",
+        tabBarShowLabel: false,
       })}
     >
       <Tab.Screen
@@ -135,7 +151,6 @@ function ManagerTabs() {
         component={HomeManager}
         options={{ headerShown: false }}
       />
-
       <Tab.Screen
         name="Profile"
         component={ProfileStack}
@@ -150,10 +165,10 @@ export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userRole, setUserRole] = useState(null);
   let [fontsLoaded] = useFonts({
-    Montserrat_400Regular,
-    Montserrat_500Medium,
-    Montserrat_600SemiBold,
-    Montserrat_700Bold,
+    Palanquin_400Regular,
+    Palanquin_500Medium,
+    Palanquin_600SemiBold,
+    Palanquin_700Bold,
   });
 
   useEffect(() => {

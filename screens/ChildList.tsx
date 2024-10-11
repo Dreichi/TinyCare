@@ -21,21 +21,33 @@ export default function ChildList() {
   const [children, setChildren] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [isModalVisible, setIsModalVisible] = useState<boolean>(false);
+  const [isPostModalVisible, setIsPostModalVisible] = useState<boolean>(false);
   const [selectedChild, setSelectedChild] = useState<any>(null);
+  const [selectedChildId, setSelectedChildId] = useState<string | null>(null);
   const [newChild, setNewChild] = useState({
     first_name: "",
     last_name: "",
     birth_date: new Date(),
     gender: "",
   });
+  const [newPostDescription, setNewPostDescription] = useState<string>("");
   const [showDatePicker, setShowDatePicker] = useState<boolean>(false);
-  const [parentSearch, setParentSearch] = useState<string>("");
-  const [parents, setParents] = useState<any[]>([]);
+  const [nurseId, setNurseId] = useState<string | null>(null);
   const bottomSheetRef = useRef<BottomSheet>(null);
 
   useEffect(() => {
     fetchChildren();
+    getUser();
   }, []);
+
+  const getUser = async () => {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (user) {
+      setNurseId(user.id);
+    }
+  };
 
   const fetchChildren = async () => {
     try {
@@ -46,19 +58,6 @@ export default function ChildList() {
       console.error("Error fetching children: ", error);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const fetchParents = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("users")
-        .select("id, first_name, last_name")
-        .ilike("last_name", `%${parentSearch}%`);
-      if (error) throw error;
-      setParents(data);
-    } catch (error) {
-      console.error("Error fetching parents: ", error);
     }
   };
 
@@ -132,24 +131,26 @@ export default function ChildList() {
     );
   };
 
-  const handleAssignParent = async (childId: string, parentId: string) => {
+  const handleAddPost = async () => {
     try {
-      const { data, error } = await supabase
-        .from("users")
-        .select("babies")
-        .eq("id", parentId)
-        .single();
+      if (!nurseId || !selectedChildId) {
+        console.error("Erreur : ID de l'infirmière ou de l'enfant non trouvé.");
+        return;
+      }
+
+      const { data, error } = await supabase.from("post").insert([
+        {
+          date: new Date().toISOString(),
+          description: newPostDescription,
+          baby_id: selectedChildId,
+          nurse_id: nurseId,
+        },
+      ]);
       if (error) throw error;
-
-      const updatedBabies = data.babies ? [...data.babies, childId] : [childId];
-
-      const { error: updateError } = await supabase
-        .from("users")
-        .update({ babies: updatedBabies })
-        .eq("id", parentId);
-      if (updateError) throw updateError;
+      setIsPostModalVisible(false);
+      setNewPostDescription("");
     } catch (error) {
-      console.error("Error assigning parent: ", error);
+      console.error("Error adding post: ", error);
     }
   };
 
@@ -175,23 +176,15 @@ export default function ChildList() {
               Genre: {selectedChild.gender === "female" ? "Fille" : "Garçon"}
             </Text>
 
-            {/* <TextInput
-              style={styles.input}
-              placeholder="Chercher un parent"
-              value={parentSearch}
-              onChangeText={(text) => setParentSearch(text)}
-              onBlur={fetchParents}
-            />
-            {parents.map((parent) => (
-              <TouchableOpacity
-                key={parent.id}
-                onPress={() => handleAssignParent(selectedChild.id, parent.id)}
-              >
-                <Text>
-                  {parent.last_name} {parent.first_name}
-                </Text>
-              </TouchableOpacity>
-            ))} */}
+            <TouchableOpacity
+              style={styles.addPostButton}
+              onPress={() => {
+                setSelectedChildId(selectedChild.id);
+                setIsPostModalVisible(true);
+              }}
+            >
+              <Text style={styles.addPostButtonText}>Ajouter un post</Text>
+            </TouchableOpacity>
 
             <TouchableOpacity
               style={styles.deleteButton}
@@ -213,16 +206,6 @@ export default function ChildList() {
 
   return (
     <View style={styles.container}>
-      <Image
-        source={require("../assets/form.png")}
-        style={styles.topImage}
-        blurRadius={0.8}
-      ></Image>
-      <Image
-        source={require("../assets/form.png")}
-        style={styles.botImage}
-        blurRadius={0.8}
-      ></Image>
       <ScrollView contentContainerStyle={styles.scrollContainer}>
         <View style={styles.header}>
           <Text style={styles.greeting}>👦 Liste des enfants</Text>
@@ -240,6 +223,7 @@ export default function ChildList() {
                 key={child.id}
                 onPress={() => {
                   setSelectedChild(child);
+                  setSelectedChildId(child.id);
                   bottomSheetRef.current?.expand();
                 }}
               >
@@ -327,6 +311,33 @@ export default function ChildList() {
             <TouchableOpacity
               style={styles.cancelButton}
               onPress={() => setIsModalVisible(false)}
+            >
+              <Text style={styles.cancelButtonText}>Annuler</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={isPostModalVisible}
+        transparent={true}
+        animationType="slide"
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Ajouter un post</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Description du post"
+              value={newPostDescription}
+              onChangeText={(text) => setNewPostDescription(text)}
+            />
+            <TouchableOpacity style={styles.saveButton} onPress={handleAddPost}>
+              <Text style={styles.saveButtonText}>Sauvegarder</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.cancelButton}
+              onPress={() => setIsPostModalVisible(false)}
             >
               <Text style={styles.cancelButtonText}>Annuler</Text>
             </TouchableOpacity>
@@ -501,5 +512,17 @@ const styles = StyleSheet.create({
     padding: 20,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
+  },
+  addPostButton: {
+    backgroundColor: "#274C86",
+    padding: 10,
+    borderRadius: 5,
+    marginBottom: 10,
+    alignSelf: "center",
+  },
+  addPostButtonText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    textAlign: "center",
   },
 });

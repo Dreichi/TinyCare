@@ -14,6 +14,7 @@ import { supabase } from "../utils/supabase";
 
 export default function NurseContact({ navigation }: any) {
   const [nurses, setNurses] = useState<any[]>([]);
+  const [profile, setProfile] = useState<any>();
 
   useEffect(() => {
     const fetchNurses = async () => {
@@ -29,18 +30,82 @@ export default function NurseContact({ navigation }: any) {
       }
     };
 
+    const fetchProfile = async () => {
+      const { data: user } = await supabase.auth.getUser();
+      const userId = user.user?.id;
+      if (user) {
+        const { data: profileData, error } = await supabase
+          .from("users")
+          .select("id, name")
+          .eq("id", userId)
+          .single();
+
+        if (error) {
+          console.error("Erreur lors de la récupération du profil :", error);
+        } else {
+          setProfile(profileData);
+        }
+      } else {
+        console.error("Aucun utilisateur connecté");
+      }
+    };
+
     fetchNurses();
+    fetchProfile();
   }, []);
+
+  const handleOpenConversation = async (nurse: any) => {
+    if (!profile?.id || !nurse?.id) {
+      console.error(
+        "Les IDs de l'utilisateur ou de l'infirmière sont manquants."
+      );
+      return;
+    }
+
+    try {
+      const { data: existingConversation } = await supabase
+        .from("conversations")
+        .select("id")
+        .or(`user1_id.eq.${profile.id},user2_id.eq.${profile.id}`)
+        .or(`user1_id.eq.${nurse.id},user2_id.eq.${nurse.id}`)
+        .eq("user1_id", profile.id)
+        .eq("user2_id", nurse.id)
+        .single();
+
+      let conversationId;
+      if (existingConversation) {
+        conversationId = existingConversation.id;
+      } else {
+        const { data: newConversation, error } = await supabase
+          .from("conversations")
+          .insert([{ user1_id: profile.id, user2_id: nurse.id }])
+          .select("id")
+          .single();
+
+        if (error) {
+          console.error(
+            "Erreur lors de la création de la conversation :",
+            error
+          );
+          return;
+        }
+        conversationId = newConversation.id;
+      }
+
+      navigation.navigate("ChatScreen", {
+        conversationId,
+        otherUserName: nurse.name,
+      });
+    } catch (error) {
+      console.error("Erreur lors de l'ouverture de la conversation :", error);
+    }
+  };
 
   const renderMenuItem = (item: any) => (
     <TouchableOpacity
       style={styles.menuButton}
       key={item.id}
-      onPress={() => {
-        if (item.screen) {
-          navigation.navigate(item.screen);
-        }
-      }}
+      onPress={() => handleOpenConversation(item)}
     >
       <Text style={styles.menuIcon}>👩‍⚕️</Text>
       <Text style={styles.menuText}>{item.name}</Text>
@@ -49,7 +114,7 @@ export default function NurseContact({ navigation }: any) {
   );
 
   const handleCallService = () => {
-    Linking.openURL("tel:+123456789"); // Remplacez le numéro par le numéro réel du service
+    Linking.openURL("tel:+123456789");
   };
 
   return (
@@ -133,7 +198,7 @@ const styles = StyleSheet.create({
   textSubmit: {
     color: "white",
     textAlign: "center",
-    fontFamily: "Montserrat_600SemiBold",
+    fontFamily: "Palanquin_600SemiBold",
   },
   menuContainer: {
     flex: 1,

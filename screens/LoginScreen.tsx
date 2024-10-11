@@ -125,7 +125,7 @@ const styles = StyleSheet.create({
     marginBottom: 32,
     textAlign: "center",
     color: "rgba(17, 65, 135, 1)",
-    fontFamily: "Montserrat_600SemiBold",
+    fontFamily: "Palanquin_600SemiBold",
     marginTop: 16,
   },
   inputContainer: {
@@ -138,7 +138,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#000",
     marginBottom: 4,
-    fontFamily: "Montserrat_600SemiBold",
+    fontFamily: "Palanquin_600SemiBold",
   },
   input: {
     height: 50,
@@ -149,7 +149,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     backgroundColor: "#FFFFFF",
     color: "#000",
-    fontFamily: "Montserrat_400Regular",
+    fontFamily: "Palanquin_400Regular",
   },
   submit: {
     backgroundColor: "rgba(17, 65, 135, 1)",
@@ -164,7 +164,7 @@ const styles = StyleSheet.create({
   textSubmit: {
     color: "white",
     textAlign: "center",
-    fontFamily: "Montserrat_600SemiBold",
+    fontFamily: "Palanquin_600SemiBold",
   },
   textLink: {
     color: "#849CCE",
